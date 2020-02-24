@@ -3,3 +3,48 @@ syntax = "proto3";
 package pb;
 
 
+message SetRequest {
+    bytes key       =   1;
+    bytes value     =   2;
+    VMetaReq meta   =   3;
+}
+
+message SetResponse {
+    int32   code    =   1;
+    string  msg     =   2;
+}
+
+message GetRequest {
+    bytes key       =   1;
+}
+
+message GetResponse {
+    int32   code    =   1;
+    string  msg     =   2;
+    bytes   value   =   3;
+    VMetaResp meta  =   4;
+}
+
+message DeleteRequest {
+    bytes key       =   1;
+}
+
+message DeleteResponse {
+    int32   code    =   1;
+    string  msg     =   2;
+}
+
+message VMetaReq {
+    uint64 TTL      =   1;
+    uint32 Tag      =   2;
+}
+
+message VMetaResp {
+    uint64 ExpiresAt    =   1;
+    uint32 Tag          =   2;
+}
+
+message CommitResponse {
+    int32   code    =   1;
+    string  msg     =   2;
+}
