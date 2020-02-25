@@ -7,7 +7,85 @@ import (
 	"github.com/zhiqiangxu/kvrpc/pb"
 	"github.com/zhiqiangxu/kvrpc/provider"
 	"github.com/zhiqiangxu/qrpc"
+	"github.com/zhiqiangxu/util/logger"
+	"go.uber.org/zap"
 )
+
+func handleTxnContinuedFrame(
+	writer qrpc.FrameWriter,
+	frame *qrpc.RequestFrame,
+	txn kvrpc.Txn) {
+	var (
+		getReq     pb.GetRequest
+		getResp    pb.GetResponse
+		deleteReq  pb.DeleteRequest
+		deleteResp pb.DeleteResponse
+		setReq     pb.SetRequest
+		setResp    pb.SetResponse
+		commitResp pb.CommitResponse
+		err        error
+	)
+	for {
+		nextFrame := <-frame.FrameCh()
+		if nextFrame == nil {
+			txn.Discard()
+			err = writeStreamRespBytes(writer, frame, DiscardRespCmd, nil, true)
+			if err != nil {
+				logger.Instance().Error("nil writeStreamRespBytes", zap.Error(err))
+			}
+			return
+		}
+		switch nextFrame.Cmd {
+		case SetCmd:
+			handleTxnSet(txn, &setReq, &setResp)
+			{
+				bytes, _ := setResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, SetRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("SetCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+		case GetCmd:
+			handleTxnGet(txn, &getReq, &getResp)
+			{
+				bytes, _ := getResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, GetRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("GetCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+		case DeleteCmd:
+			handleTxnDelete(txn, &deleteReq, &deleteResp)
+			{
+				bytes, _ := deleteResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, DeleteRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("DeleteCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+		case CommitCmd:
+			handleTxnCommit(txn, &commitResp)
+			{
+				bytes, _ := commitResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, CommitRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("CommitCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+		case DiscardCmd:
+			txn.Discard()
+			err = writeStreamRespBytes(writer, frame, DiscardRespCmd, nil, true)
+			if err != nil {
+				logger.Instance().Error("DiscardCmd writeStreamRespBytes", zap.Error(err))
+			}
+			return
+		}
+	}
+}
 
 func handleTxnSet(txn kvrpc.Txn, req *pb.SetRequest, resp *pb.SetResponse) {
 	meta := metaFromSetRequest(req)
@@ -72,7 +150,7 @@ func handleGet(kvdb kvrpc.KVDB, req *pb.GetRequest, resp *pb.GetResponse) {
 	resp.Meta = &pb.VMetaResp{ExpiresAt: meta.ExpiresAt, Tag: uint32(meta.Tag)}
 }
 
-func handleDelete(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
+func handleDelete(kvdb kvrpc.KVDB, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
 	err := kvdb.Delete(req.Key)
 	if err != nil {
 		resp.Code = CodeInternalError

@@ -7,24 +7,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// CmdSet for set
-type CmdSet struct {
+// CmdDelete for delete
+type CmdDelete struct {
 	s *Server
 }
 
 // ServeQRPC implements qrpc.Handler
-func (cmd *CmdSet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) {
+func (cmd *CmdDelete) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) {
 	var (
-		setReq  pb.SetRequest
-		setResp pb.SetResponse
+		deleteReq  pb.DeleteRequest
+		deleteResp pb.DeleteResponse
 	)
 
-	err := setReq.Unmarshal(frame.Payload)
+	err := deleteReq.Unmarshal(frame.Payload)
 	if err != nil {
-		setResp.Code = CodeInvalidRequest
-		setResp.Msg = err.Error()
-		bytes, _ := setResp.Marshal()
-		err := writeRespBytes(writer, frame, SetRespCmd, bytes)
+		deleteResp.Code = CodeInvalidRequest
+		deleteResp.Msg = err.Error()
+		bytes, _ := deleteResp.Marshal()
+		err := writeRespBytes(writer, frame, DeleteRespCmd, bytes)
 		if err != nil {
 			logger.Instance().Error("writeRespBytes", zap.Error(err))
 		}
@@ -35,10 +35,10 @@ func (cmd *CmdSet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) 
 	switch frame.Flags.IsDone() {
 	case true:
 
-		handleSet(cmd.s.kvdb, &setReq, &setResp)
+		handleDelete(cmd.s.kvdb, &deleteReq, &deleteResp)
 
-		bytes, _ := setResp.Marshal()
-		err = writeRespBytes(writer, frame, SetRespCmd, bytes)
+		bytes, _ := deleteResp.Marshal()
+		err = writeRespBytes(writer, frame, DeleteRespCmd, bytes)
 		if err != nil {
 			logger.Instance().Error("writeRespBytes", zap.Error(err))
 		}
@@ -46,10 +46,10 @@ func (cmd *CmdSet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) 
 		txn := cmd.s.kvdb.NewTransaction(true)
 		defer txn.Discard()
 
-		handleTxnSet(txn, &setReq, &setResp)
+		handleTxnDelete(txn, &deleteReq, &deleteResp)
 		{
-			bytes, _ := setResp.Marshal()
-			err = writeStreamRespBytes(writer, frame, SetRespCmd, bytes, false)
+			bytes, _ := deleteResp.Marshal()
+			err = writeStreamRespBytes(writer, frame, DeleteRespCmd, bytes, false)
 			if err != nil {
 				logger.Instance().Error("writeStreamRespBytes", zap.Error(err))
 				return
