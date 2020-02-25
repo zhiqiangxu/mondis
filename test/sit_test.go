@@ -39,25 +39,25 @@ func TestBadger(t *testing.T) {
 			value1 := []byte("value1")
 			err := c.Set(key1, value1, nil)
 			if err != nil {
-				t.Fatal("Set ng")
+				t.Fatal("Set key1")
 			}
 
 			// test Get
 			v, _, err := c.Get(key1)
 			if err != nil || !bytes.Equal(v, value1) {
-				t.Fatal("Get ng")
+				t.Fatal("Get key1")
 			}
 
 			// test Delete
 			err = c.Delete(key1)
 			if err != nil {
-				t.Fatal("Delete ng", err)
+				t.Fatal("Delete key1", err)
 			}
 
 			// test Get when key not exists
 			_, _, err = c.Get(key1)
 			if err != provider.ErrKeyNotFound {
-				t.Fatal("Get ng")
+				t.Fatal("Get key1")
 			}
 		}
 
@@ -68,27 +68,27 @@ func TestBadger(t *testing.T) {
 			err := c.Update(func(txn kvrpc.Txn) error {
 				err := txn.Set(key2, value2, nil)
 				if err != nil {
-					t.Fatal("Update.Set ng")
+					t.Fatal("Update.Set key2")
 				}
 
 				v, _, err := txn.Get(key2)
 				if err != nil || !bytes.Equal(v, value2) {
-					t.Fatal("Update.Get ng")
+					t.Fatal("Update.Get key2")
 				}
 
 				err = txn.Delete(key2)
 				if err != nil {
-					t.Fatal("Update.Delete ng")
+					t.Fatal("Update.Delete key2")
 				}
 
 				_, _, err = txn.Get(key2)
 				if err != provider.ErrKeyNotFound {
-					t.Fatal("Update.Get ng2")
+					t.Fatal("Update.Get key2")
 				}
 				return nil
 			})
 			if err != nil {
-				t.Fatal("Update ng", err)
+				t.Fatal("Update", err)
 			}
 		}
 
@@ -98,23 +98,24 @@ func TestBadger(t *testing.T) {
 			value3 := []byte("value3")
 			err := c.Set(key3, value3, nil)
 			if err != nil {
-				t.Fatal("Set ng2", err)
+				t.Fatal("Set key3", err)
 			}
 			err = c.View(func(txn kvrpc.Txn) error {
 				v, _, err := txn.Get(key3)
 				if err != nil || !bytes.Equal(v, value3) {
-					t.Fatal("View Get ng", err)
+					t.Fatal("View Get key3", err)
 				}
 				return nil
 			})
 			if err != nil {
-				t.Fatal("View ng", err)
+				t.Fatal("View", err)
 			}
 			err = c.Delete(key3)
 			if err != nil {
-				t.Fatal("Delete ng2", err)
+				t.Fatal("Delete key3", err)
 			}
 		}
 
 	}
+
 }
