@@ -11,10 +11,11 @@ import (
 
 // Txn for client side transaction
 type Txn struct {
-	c      *Client
-	update bool
-	sw     qrpc.StreamWriter
-	resp   qrpc.Response
+	c          *Client
+	update     bool
+	sw         qrpc.StreamWriter
+	resp       qrpc.Response
+	firstFrame *qrpc.Frame
 }
 
 var _ kvrpc.Txn = (*Txn)(nil)
@@ -38,11 +39,26 @@ func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 		return
 	}
 
-	err = parseSetResp(txn.resp)
+	respFrame, err := txn.getRespFrame()
 	if err != nil {
 		return
 	}
 
+	err = parseSetRespFromFrame(respFrame)
+
+	return
+}
+
+func (txn *Txn) getRespFrame() (respFrame *qrpc.Frame, err error) {
+	if txn.firstFrame != nil {
+		respFrame = <-txn.firstFrame.FrameCh()
+		return
+	}
+
+	respFrame, err = txn.resp.GetFrame()
+	if err == nil {
+		txn.firstFrame = respFrame
+	}
 	return
 }
 
@@ -88,7 +104,12 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 		return
 	}
 
-	v, meta, err = parseGetResp(txn.resp)
+	respFrame, err := txn.getRespFrame()
+	if err != nil {
+		return
+	}
+
+	v, meta, err = parseGetRespFromFrame(respFrame)
 
 	return
 }
@@ -111,19 +132,20 @@ func (txn *Txn) Delete(k []byte) (err error) {
 		return
 	}
 
-	err = parseDeleteResp(txn.resp)
-
-	return
-}
-
-func parseCommitResp(resp qrpc.Response) (err error) {
-	frame, err := resp.GetFrame()
+	respFrame, err := txn.getRespFrame()
 	if err != nil {
 		return
 	}
 
+	err = parseDeleteRespFromFrame(respFrame)
+
+	return
+}
+
+func parseCommitResp(respFrame *qrpc.Frame) (err error) {
+
 	var commitResp pb.CommitResponse
-	err = commitResp.Unmarshal(frame.Payload)
+	err = commitResp.Unmarshal(respFrame.Payload)
 	if err != nil {
 		return
 	}
@@ -147,7 +169,12 @@ func (txn *Txn) Commit() (err error) {
 		return
 	}
 
-	err = parseCommitResp(txn.resp)
+	respFrame, err := txn.getRespFrame()
+	if err != nil {
+		return
+	}
+
+	err = parseCommitResp(respFrame)
 
 	return
 }
@@ -163,7 +190,7 @@ func (txn *Txn) Discard() {
 		return
 	}
 
-	_, err = txn.resp.GetFrame()
+	_, err = txn.getRespFrame()
 
 	return
 }

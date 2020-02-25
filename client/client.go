@@ -47,8 +47,13 @@ func parseSetResp(resp qrpc.Response) (err error) {
 		return
 	}
 
+	return parseSetRespFromFrame(frame)
+
+}
+
+func parseSetRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	var setResp pb.SetResponse
-	err = setResp.Unmarshal(frame.Payload)
+	err = setResp.Unmarshal(respFrame.Payload)
 	if err != nil {
 		return
 	}
@@ -89,8 +94,13 @@ func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error
 		return
 	}
 
+	v, meta, err = parseGetRespFromFrame(frame)
+	return
+}
+
+func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta kvrpc.VMetaResp, err error) {
 	var getResp pb.GetResponse
-	err = getResp.Unmarshal(frame.Payload)
+	err = getResp.Unmarshal(respFrame.Payload)
 	if err != nil {
 		return
 	}
@@ -134,8 +144,13 @@ func parseDeleteResp(resp qrpc.Response) (err error) {
 		return
 	}
 
+	err = parseDeleteRespFromFrame(frame)
+	return
+}
+
+func parseDeleteRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	var deleteResp pb.DeleteResponse
-	err = deleteResp.Unmarshal(frame.Payload)
+	err = deleteResp.Unmarshal(respFrame.Payload)
 	if err != nil {
 		return
 	}

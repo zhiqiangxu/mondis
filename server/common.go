@@ -24,6 +24,7 @@ func handleTxnContinuedFrame(
 		setResp    pb.SetResponse
 		commitResp pb.CommitResponse
 		err        error
+		close      bool
 	)
 	for {
 		nextFrame := <-frame.FrameCh()
@@ -37,7 +38,16 @@ func handleTxnContinuedFrame(
 		}
 		switch nextFrame.Cmd {
 		case SetCmd:
-			handleTxnSet(txn, &setReq, &setResp)
+			close = false
+			err = setResp.Unmarshal(nextFrame.Payload)
+			if err != nil {
+				close = true
+				setResp.Code = CodeInvalidRequest
+				setResp.Msg = err.Error()
+			} else {
+				handleTxnSet(txn, &setReq, &setResp)
+			}
+
 			{
 				bytes, _ := setResp.Marshal()
 				err = writeStreamRespBytes(writer, frame, SetRespCmd, bytes, false)
@@ -46,8 +56,21 @@ func handleTxnContinuedFrame(
 					return
 				}
 			}
+			if close {
+				frame.Close()
+				return
+			}
 		case GetCmd:
-			handleTxnGet(txn, &getReq, &getResp)
+			close = false
+			err = getReq.Unmarshal(nextFrame.Payload)
+			if err != nil {
+				close = true
+				getResp.Code = CodeInvalidRequest
+				getResp.Msg = err.Error()
+			} else {
+				handleTxnGet(txn, &getReq, &getResp)
+			}
+
 			{
 				bytes, _ := getResp.Marshal()
 				err = writeStreamRespBytes(writer, frame, GetRespCmd, bytes, false)
@@ -56,8 +79,21 @@ func handleTxnContinuedFrame(
 					return
 				}
 			}
+			if close {
+				frame.Close()
+				return
+			}
 		case DeleteCmd:
-			handleTxnDelete(txn, &deleteReq, &deleteResp)
+			close = false
+			err = deleteReq.Unmarshal(nextFrame.Payload)
+			if err != nil {
+				close = true
+				deleteResp.Code = CodeInvalidRequest
+				deleteResp.Msg = err.Error()
+			} else {
+				handleTxnDelete(txn, &deleteReq, &deleteResp)
+			}
+
 			{
 				bytes, _ := deleteResp.Marshal()
 				err = writeStreamRespBytes(writer, frame, DeleteRespCmd, bytes, false)
@@ -66,15 +102,19 @@ func handleTxnContinuedFrame(
 					return
 				}
 			}
+			if close {
+				frame.Close()
+				return
+			}
 		case CommitCmd:
 			handleTxnCommit(txn, &commitResp)
 			{
 				bytes, _ := commitResp.Marshal()
-				err = writeStreamRespBytes(writer, frame, CommitRespCmd, bytes, false)
+				err = writeStreamRespBytes(writer, frame, CommitRespCmd, bytes, true)
 				if err != nil {
 					logger.Instance().Error("CommitCmd writeStreamRespBytes", zap.Error(err))
-					return
 				}
+				return
 			}
 		case DiscardCmd:
 			txn.Discard()
