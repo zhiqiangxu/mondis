@@ -1,14 +1,15 @@
-package kvrpc
+package client
 
 import (
+	"github.com/zhiqiangxu/kvrpc"
 	"github.com/zhiqiangxu/kvrpc/pb"
 	"github.com/zhiqiangxu/kvrpc/server"
 	"github.com/zhiqiangxu/qrpc"
 )
 
 type (
-	// ClientOption for Client
-	ClientOption struct {
+	// Option for Client
+	Option struct {
 		QrpcConfig qrpc.ConnectionConfig
 	}
 	// Client for kvrpc
@@ -18,23 +19,23 @@ type (
 
 	// KVClient is implemneted by Client
 	KVClient interface {
-		KVOP
-		Update(func(t Txn) error) error
-		View(func(t Txn) error) error
+		kvrpc.KVOP
+		Update(func(t kvrpc.Txn) error) error
+		View(func(t kvrpc.Txn) error) error
 	}
 )
 
-// NewClient is ctor for Client
-func NewClient(addr string, option ClientOption) (c KVClient) {
+// New is ctor for Client
+func New(addr string, option Option) (c KVClient) {
 	con := qrpc.NewConnectionWithReconnect([]string{addr}, option.QrpcConfig, nil)
 	c = &Client{con: con}
 	return
 }
 
-func setReq2PB(k, v []byte, meta *VMetaReq) pb.SetRequest {
+func setReq2PB(k, v []byte, meta *kvrpc.VMetaReq) pb.SetRequest {
 	req := pb.SetRequest{Key: k, Value: v}
 	if meta != nil {
-		req.Meta = &pb.VMetaReq{TTL: uint64(meta.TTL), Tag: uint32(meta.Tag)}
+		req.Meta = &pb.VMetaReq{TTL: int64(meta.TTL), Tag: uint32(meta.Tag)}
 	}
 	return req
 }
@@ -60,7 +61,7 @@ func parseSetResp(resp qrpc.Response) (err error) {
 }
 
 // Set for implement KVClient
-func (c *Client) Set(k, v []byte, meta *VMetaReq) (err error) {
+func (c *Client) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 
 	req := setReq2PB(k, v, meta)
 	bytes, _ := req.Marshal()
@@ -75,7 +76,7 @@ func (c *Client) Set(k, v []byte, meta *VMetaReq) (err error) {
 	return
 }
 
-func parseGetResp(resp qrpc.Response) (v []byte, meta VMetaResp, err error) {
+func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error) {
 	frame, err := resp.GetFrame()
 	if err != nil {
 		return
@@ -100,7 +101,7 @@ func parseGetResp(resp qrpc.Response) (v []byte, meta VMetaResp, err error) {
 }
 
 // Get for implement KVClient
-func (c *Client) Get(k []byte) (v []byte, meta VMetaResp, err error) {
+func (c *Client) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
 
@@ -150,8 +151,8 @@ func (c *Client) Delete(k []byte) (err error) {
 }
 
 // Update for implement KVClient
-func (c *Client) Update(fn func(t Txn) error) (err error) {
-	txn := newClientTxn(c, true)
+func (c *Client) Update(fn func(t kvrpc.Txn) error) (err error) {
+	txn := newTxn(c, true)
 	defer txn.Discard()
 
 	err = fn(txn)
@@ -164,8 +165,8 @@ func (c *Client) Update(fn func(t Txn) error) (err error) {
 }
 
 // View for implement KVClient
-func (c *Client) View(fn func(t Txn) error) (err error) {
-	txn := newClientTxn(c, false)
+func (c *Client) View(fn func(t kvrpc.Txn) error) (err error) {
+	txn := newTxn(c, false)
 	defer txn.Discard()
 
 	err = fn(txn)

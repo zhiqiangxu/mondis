@@ -1,4 +1,4 @@
-package kvrpc
+package client
 
 import "fmt"
 

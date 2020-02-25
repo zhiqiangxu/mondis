@@ -10,6 +10,12 @@ type Txn badger.Txn
 
 // Set for implement kvrpc.Txn
 func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
+	defer func() {
+		if err == badger.ErrTxnTooBig {
+			err = ErrTxnTooBig
+		}
+	}()
+
 	if meta == nil {
 		return (*badger.Txn)(txn).Set(k, v)
 	}
@@ -38,6 +44,12 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 
 // Delete for implement kvrpc.Txn
 func (txn *Txn) Delete(key []byte) (err error) {
+	defer func() {
+		if err == badger.ErrTxnTooBig {
+			err = ErrTxnTooBig
+		}
+	}()
+
 	err = (*badger.Txn)(txn).Delete(key)
 	return
 }

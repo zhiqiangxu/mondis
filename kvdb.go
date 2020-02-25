@@ -12,8 +12,7 @@ type (
 		KVOP
 		Open(option KVOption) error
 		Close() error
-		Update(func(t Txn) error) error
-		View(func(t Txn) error) error
+		NewTransaction(update bool) Txn
 	}
 
 	// VMetaReq for set value meta

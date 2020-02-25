@@ -28,24 +28,16 @@ func (b *Badger) Open(option kvrpc.KVOption) (err error) {
 
 // Close db
 func (b *Badger) Close() (err error) {
+	if b.db == nil {
+		return
+	}
 	err = b.db.Close()
 	return
 }
 
-// Update for writable transaction
-func (b *Badger) Update(fn func(t kvrpc.Txn) error) (err error) {
-	err = b.db.Update(func(txn *badger.Txn) error {
-		return fn((*Txn)(txn))
-	})
-	return
-}
-
-// View for readonly transaction
-func (b *Badger) View(fn func(t kvrpc.Txn) error) (err error) {
-	err = b.db.View(func(txn *badger.Txn) error {
-		return fn((*Txn)(txn))
-	})
-	return
+// NewTransaction creates a transaction object
+func (b *Badger) NewTransaction(update bool) kvrpc.Txn {
+	return (*Txn)(b.db.NewTransaction(update))
 }
 
 // Set kv

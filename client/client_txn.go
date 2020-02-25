@@ -1,30 +1,30 @@
-package kvrpc
+package client
 
 import (
 	"errors"
 
+	"github.com/zhiqiangxu/kvrpc"
 	"github.com/zhiqiangxu/kvrpc/pb"
 	"github.com/zhiqiangxu/kvrpc/server"
 	"github.com/zhiqiangxu/qrpc"
 )
 
-// ClientTxn for client side transaction
-type ClientTxn struct {
-	c                 *Client
-	update            bool
-	commitOrDiscarded bool
-	sw                qrpc.StreamWriter
-	resp              qrpc.Response
+// Txn for client side transaction
+type Txn struct {
+	c      *Client
+	update bool
+	sw     qrpc.StreamWriter
+	resp   qrpc.Response
 }
 
-var _ Txn = (*ClientTxn)(nil)
+var _ kvrpc.Txn = (*Txn)(nil)
 
-func newClientTxn(c *Client, update bool) *ClientTxn {
-	return &ClientTxn{c: c, update: update}
+func newTxn(c *Client, update bool) *Txn {
+	return &Txn{c: c, update: update}
 }
 
 // Set for implement Txn
-func (txn *ClientTxn) Set(k, v []byte, meta *VMetaReq) (err error) {
+func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
 		return
@@ -46,7 +46,7 @@ func (txn *ClientTxn) Set(k, v []byte, meta *VMetaReq) (err error) {
 	return
 }
 
-func (txn *ClientTxn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, err error) {
+func (txn *Txn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, err error) {
 	if txn.sw != nil {
 		txn.sw.StartWrite(cmd)
 		txn.sw.WriteBytes(bytes)
@@ -58,6 +58,10 @@ func (txn *ClientTxn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, 
 		// noop if transaction empty
 		noop = true
 		return
+	}
+
+	if txn.update {
+		cmd = qrpc.CmdWithOpaque(cmd, 1)
 	}
 
 	flag := qrpc.StreamFlag
@@ -75,7 +79,7 @@ func (txn *ClientTxn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, 
 }
 
 // Get for implement Txn
-func (txn *ClientTxn) Get(k []byte) (v []byte, meta VMetaResp, err error) {
+func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
 
@@ -93,7 +97,7 @@ func (txn *ClientTxn) Get(k []byte) (v []byte, meta VMetaResp, err error) {
 var ErrMutateForROTxn = errors.New("mutate for readonly txn")
 
 // Delete for implement Txn
-func (txn *ClientTxn) Delete(k []byte) (err error) {
+func (txn *Txn) Delete(k []byte) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
 		return
@@ -133,7 +137,7 @@ func parseCommitResp(resp qrpc.Response) (err error) {
 }
 
 // Commit for implement Txn
-func (txn *ClientTxn) Commit() (err error) {
+func (txn *Txn) Commit() (err error) {
 	noop, err := txn.request(server.CommitCmd, nil, true)
 	if err != nil {
 		return
@@ -149,7 +153,7 @@ func (txn *ClientTxn) Commit() (err error) {
 }
 
 // Discard for implement Txn
-func (txn *ClientTxn) Discard() {
+func (txn *Txn) Discard() {
 	noop, err := txn.request(server.DiscardCmd, nil, true)
 	if err != nil {
 		return

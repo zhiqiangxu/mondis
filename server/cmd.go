@@ -5,8 +5,8 @@ import "github.com/zhiqiangxu/qrpc"
 const (
 	// SetCmd for set
 	SetCmd qrpc.Cmd = iota
-	// SetResp is resp for SetCmd
-	SetResp
+	// SetRespCmd is resp for SetCmd
+	SetRespCmd
 	// GetCmd for get
 	GetCmd
 	// GetRespCmd is resp for GetCmd
@@ -19,6 +19,8 @@ const (
 	CommitCmd
 	// CommitRespCmd is resp for CommitCmd
 	CommitRespCmd
-	// DiscardCmd for discard, this cmd has no resp
+	// DiscardCmd for discard
 	DiscardCmd
+	// DiscardRespCmd is resp for DiscardCmd
+	DiscardRespCmd
 )
