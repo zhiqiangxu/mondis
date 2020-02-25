@@ -29,6 +29,9 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 
 	item, err := (*badger.Txn)(txn).Get(k)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			err = ErrKeyNotFound
+		}
 		return
 	}
 

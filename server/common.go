@@ -125,8 +125,13 @@ func handleSet(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
 func handleTxnGet(txn kvrpc.Txn, req *pb.GetRequest, resp *pb.GetResponse) {
 	value, meta, err := txn.Get(req.Key)
 	if err != nil {
-		resp.Code = CodeInternalError
-		resp.Msg = err.Error()
+		if err == provider.ErrKeyNotFound {
+			resp.Code = CodeKeyNotFound
+			resp.Msg = err.Error()
+		} else {
+			resp.Code = CodeInternalError
+			resp.Msg = err.Error()
+		}
 		return
 	}
 
@@ -139,8 +144,14 @@ func handleTxnGet(txn kvrpc.Txn, req *pb.GetRequest, resp *pb.GetResponse) {
 func handleGet(kvdb kvrpc.KVDB, req *pb.GetRequest, resp *pb.GetResponse) {
 	value, meta, err := kvdb.Get(req.Key)
 	if err != nil {
-		resp.Code = CodeInternalError
-		resp.Msg = err.Error()
+		if err == provider.ErrKeyNotFound {
+			resp.Code = CodeKeyNotFound
+			resp.Msg = err.Error()
+		} else {
+			resp.Code = CodeInternalError
+			resp.Msg = err.Error()
+		}
+
 		return
 	}
 

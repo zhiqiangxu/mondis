@@ -36,12 +36,40 @@ func TestBadger(t *testing.T) {
 		value1 := []byte("value1")
 		err := c.Set(key1, value1, nil)
 		if err != nil {
-			t.Fatalf("Set ng")
+			t.Fatal("Set ng")
 		}
 
 		v, _, err := c.Get(key1)
 		if err != nil || !bytes.Equal(v, value1) {
-			t.Fatalf("Get ng")
+			t.Fatal("Get ng")
+		}
+
+		err = c.Delete(key1)
+		if err != nil {
+			t.Fatal("Delete ng", err)
+		}
+
+		_, _, err = c.Get(key1)
+		if err != provider.ErrKeyNotFound {
+			t.Fatal("Get ng")
+		}
+
+		key2 := []byte("key2")
+		value2 := []byte("value2")
+		err = c.Update(func(txn kvrpc.Txn) error {
+			err := txn.Set(key2, value2, nil)
+			if err != nil {
+				t.Fatal("Update.Set ng")
+			}
+
+			v, _, err := txn.Get(key2)
+			if err != nil || !bytes.Equal(v, value2) {
+				t.Fatal("Update.Get ng")
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal("Update ng", err)
 		}
 	}
 }

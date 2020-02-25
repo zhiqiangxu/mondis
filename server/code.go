@@ -9,4 +9,6 @@ const (
 	CodeInternalError
 	// CodeTxnTooBig for transaction too big
 	CodeTxnTooBig
+	// CodeKeyNotFound for key not found
+	CodeKeyNotFound
 )

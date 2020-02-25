@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/zhiqiangxu/kvrpc"
 	"github.com/zhiqiangxu/kvrpc/pb"
+	"github.com/zhiqiangxu/kvrpc/provider"
 	"github.com/zhiqiangxu/kvrpc/server"
 	"github.com/zhiqiangxu/qrpc"
 )
@@ -53,7 +54,13 @@ func parseSetResp(resp qrpc.Response) (err error) {
 	}
 
 	if setResp.Code != 0 {
-		err = newPBError(setResp.Code, setResp.Msg)
+
+		if setResp.Code == server.CodeTxnTooBig {
+			err = provider.ErrTxnTooBig
+		} else {
+			err = newPBError(setResp.Code, setResp.Msg)
+		}
+
 		return
 	}
 
@@ -89,7 +96,13 @@ func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error
 	}
 
 	if getResp.Code != 0 {
-		err = newPBError(getResp.Code, getResp.Msg)
+
+		if getResp.Code == server.CodeKeyNotFound {
+			err = provider.ErrKeyNotFound
+		} else {
+			err = newPBError(getResp.Code, getResp.Msg)
+		}
+
 		return
 	}
 

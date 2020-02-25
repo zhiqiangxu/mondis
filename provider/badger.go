@@ -66,6 +66,9 @@ func (b *Badger) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 
 	item, err := txn.Get(k)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			err = ErrKeyNotFound
+		}
 		return
 	}
 
@@ -81,7 +84,7 @@ func (b *Badger) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 
 // Delete k
 func (b *Badger) Delete(key []byte) (err error) {
-	txn := b.db.NewTransaction(false)
+	txn := b.db.NewTransaction(true)
 	defer txn.Discard()
 
 	err = txn.Delete(key)
