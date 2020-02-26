@@ -24,7 +24,7 @@ func newTxn(c *Client, update bool) *Txn {
 	return &Txn{c: c, update: update}
 }
 
-// Set for implement Txn
+// Set for implement kvrpc.Txn
 func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
@@ -94,7 +94,7 @@ func (txn *Txn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, err er
 	return
 }
 
-// Get for implement Txn
+// Get for implement kvrpc.Txn
 func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -117,7 +117,7 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 // ErrMutateForROTxn when trying to delete/set on readonly txn
 var ErrMutateForROTxn = errors.New("mutate for readonly txn")
 
-// Delete for implement Txn
+// Delete for implement kvrpc.Txn
 func (txn *Txn) Delete(k []byte) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
@@ -158,7 +158,7 @@ func parseCommitResp(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Commit for implement Txn
+// Commit for implement kvrpc.Txn
 func (txn *Txn) Commit() (err error) {
 	noop, err := txn.request(server.CommitCmd, nil, true)
 	if err != nil {
@@ -179,7 +179,7 @@ func (txn *Txn) Commit() (err error) {
 	return
 }
 
-// Discard for implement Txn
+// Discard for implement kvrpc.Txn
 func (txn *Txn) Discard() {
 	noop, err := txn.request(server.DiscardCmd, nil, true)
 	if err != nil {
@@ -191,6 +191,33 @@ func (txn *Txn) Discard() {
 	}
 
 	_, err = txn.getRespFrame()
+
+	return
+}
+
+// Scan for implement kvrpc.Txn
+func (txn *Txn) Scan(option kvrpc.ScanOption) (entries []kvrpc.Entry, err error) {
+	if option.Limit <= 0 {
+		return
+	}
+
+	if option.Limit > kvrpc.MaxEntry {
+		option.Limit = kvrpc.MaxEntry
+	}
+
+	bytes := scanOption2Bytes(option)
+
+	_, err = txn.request(server.ScanCmd, bytes, false)
+	if err != nil {
+		return
+	}
+
+	respFrame, err := txn.getRespFrame()
+	if err != nil {
+		return
+	}
+
+	entries, err = parseScanRespFromFrame(respFrame)
 
 	return
 }

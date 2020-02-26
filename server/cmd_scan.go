@@ -7,24 +7,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// CmdGet for get
-type CmdGet struct {
+// CmdScan for scan
+type CmdScan struct {
 	s *Server
 }
 
 // ServeQRPC implements qrpc.Handler
-func (cmd *CmdGet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) {
+func (cmd *CmdScan) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) {
 	var (
-		getReq  pb.GetRequest
-		getResp pb.GetResponse
+		scanReq  pb.ScanRequest
+		scanResp pb.ScanResponse
 	)
 
-	err := getReq.Unmarshal(frame.Payload)
+	err := scanReq.Unmarshal(frame.Payload)
 	if err != nil {
-		getResp.Code = CodeInvalidRequest
-		getResp.Msg = err.Error()
-		bytes, _ := getResp.Marshal()
-		err := writeRespBytes(writer, frame, GetRespCmd, bytes)
+		scanResp.Code = CodeInvalidRequest
+		scanResp.Msg = err.Error()
+		bytes, _ := scanResp.Marshal()
+		err := writeRespBytes(writer, frame, ScanRespCmd, bytes)
 		if err != nil {
 			logger.Instance().Error("writeRespBytes", zap.Error(err))
 		}
@@ -35,10 +35,10 @@ func (cmd *CmdGet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) 
 	switch frame.Flags.IsDone() {
 	case true:
 
-		handleGet(cmd.s.kvdb, &getReq, &getResp)
+		handleScan(cmd.s.kvdb, &scanReq, &scanResp)
 
-		bytes, _ := getResp.Marshal()
-		err = writeRespBytes(writer, frame, GetRespCmd, bytes)
+		bytes, _ := scanResp.Marshal()
+		err = writeRespBytes(writer, frame, ScanRespCmd, bytes)
 		if err != nil {
 			logger.Instance().Error("writeRespBytes", zap.Error(err))
 		}
@@ -46,10 +46,10 @@ func (cmd *CmdGet) ServeQRPC(writer qrpc.FrameWriter, frame *qrpc.RequestFrame) 
 		txn := cmd.s.kvdb.NewTransaction(frame.Cmd.Opaque() == 1)
 		defer txn.Discard()
 
-		handleGet(txn, &getReq, &getResp)
+		handleScan(txn, &scanReq, &scanResp)
 		{
-			bytes, _ := getResp.Marshal()
-			err = writeStreamRespBytes(writer, frame, GetRespCmd, bytes, false)
+			bytes, _ := scanResp.Marshal()
+			err = writeStreamRespBytes(writer, frame, ScanRespCmd, bytes, false)
 			if err != nil {
 				logger.Instance().Error("writeStreamRespBytes", zap.Error(err))
 				return

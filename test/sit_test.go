@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	"time"
 
@@ -114,6 +115,55 @@ func TestBadger(t *testing.T) {
 			if err != nil {
 				t.Fatal("Delete key3", err)
 			}
+		}
+
+		{
+			// test Scan
+			prefix := "unique_prefix"
+			n := 10
+			for i := 0; i < n; i++ {
+				err := c.Set([]byte(fmt.Sprintf("%s:%d", prefix, i)), []byte{(byte(i))}, nil)
+				if err != nil {
+					t.Fatal("Set", err)
+				}
+			}
+
+			var (
+				entries []kvrpc.Entry
+				err     error
+			)
+			scanOption := kvrpc.ScanOption{Limit: n - 1, ProviderScanOption: kvrpc.ProviderScanOption{Prefix: []byte(prefix)}}
+			for j := 0; j < 2; j++ {
+				switch j {
+				case 0:
+					entries, err = c.Scan(scanOption)
+				case 1:
+					err = c.Update(func(txn kvrpc.Txn) error {
+						entries, err = txn.Scan(scanOption)
+						return err
+					})
+				case 2:
+					err = c.View(func(txn kvrpc.Txn) error {
+						entries, err = txn.Scan(scanOption)
+						return err
+					})
+				}
+
+				if err != nil {
+					t.Fatal("Scan", err)
+				}
+				if len(entries) != (n - 1) {
+					t.Fatal("entry count not expected")
+				}
+
+				// scan result should be from low to high
+				for i, entry := range entries {
+					if !bytes.Equal(entry.Key, []byte(fmt.Sprintf("%s:%d", prefix, i))) {
+						t.Fatal("entry not expected", i)
+					}
+				}
+			}
+
 		}
 
 	}

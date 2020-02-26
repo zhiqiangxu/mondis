@@ -48,3 +48,26 @@ message CommitResponse {
     int32   code    =   1;
     string  msg     =   2;
 }
+
+message ScanRequest {
+    ProviderScanOption ProviderScanOption   = 1;
+    int32 Limit                             = 2;
+}
+
+message ProviderScanOption {
+    bool reverse    = 1;
+    bytes prefix    = 2;
+    bytes offset    = 3;
+}
+
+message Entry {
+    bytes key       = 1;
+    bytes value     = 2;
+    VMetaResp meta  = 3;
+}
+
+message ScanResponse {
+    int32   code            = 1;
+    string  msg             = 2;
+    repeated Entry entries  = 3;
+}

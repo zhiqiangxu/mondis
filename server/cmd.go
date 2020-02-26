@@ -23,4 +23,8 @@ const (
 	DiscardCmd
 	// DiscardRespCmd is resp for DiscardCmd
 	DiscardRespCmd
+	// ScanCmd for scan
+	ScanCmd
+	// ScanRespCmd is resp for ScanCmd
+	ScanRespCmd
 )

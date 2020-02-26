@@ -13,21 +13,14 @@ type (
 	Option struct {
 		QrpcConfig qrpc.ConnectionConfig
 	}
-	// Client for kvrpc
+	// Client implements kvrpc.Client
 	Client struct {
 		con *qrpc.Connection
-	}
-
-	// KVClient is implemneted by Client
-	KVClient interface {
-		kvrpc.KVOP
-		Update(func(t kvrpc.Txn) error) error
-		View(func(t kvrpc.Txn) error) error
 	}
 )
 
 // New is ctor for Client
-func New(addr string, option Option) (c KVClient) {
+func New(addr string, option Option) (c kvrpc.Client) {
 	con := qrpc.NewConnectionWithReconnect([]string{addr}, option.QrpcConfig, nil)
 	c = &Client{con: con}
 	return
@@ -72,7 +65,7 @@ func parseSetRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Set for implement KVClient
+// Set for implement kvrpc.Client
 func (c *Client) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 
 	req := setReq2PB(k, v, meta)
@@ -123,7 +116,7 @@ func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta kvrpc.VMetaRes
 	return
 }
 
-// Get for implement KVClient
+// Get for implement kvrpc.Client
 func (c *Client) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -163,7 +156,7 @@ func parseDeleteRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Delete for implement KVClient
+// Delete for implement kvrpc.Client
 func (c *Client) Delete(k []byte) (err error) {
 	req := pb.DeleteRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -178,7 +171,7 @@ func (c *Client) Delete(k []byte) (err error) {
 	return
 }
 
-// Update for implement KVClient
+// Update for implement kvrpc.Client
 func (c *Client) Update(fn func(t kvrpc.Txn) error) (err error) {
 	txn := newTxn(c, true)
 	defer txn.Discard()
@@ -192,12 +185,74 @@ func (c *Client) Update(fn func(t kvrpc.Txn) error) (err error) {
 	return
 }
 
-// View for implement KVClient
+// View for implement kvrpc.Client
 func (c *Client) View(fn func(t kvrpc.Txn) error) (err error) {
 	txn := newTxn(c, false)
 	defer txn.Discard()
 
 	err = fn(txn)
+
+	return
+}
+
+func parseScanRespFromFrame(respFrame *qrpc.Frame) (entries []kvrpc.Entry, err error) {
+	var scanResp pb.ScanResponse
+	err = scanResp.Unmarshal(respFrame.Payload)
+	if err != nil {
+		return
+	}
+
+	if scanResp.Code != 0 {
+		err = newPBError(scanResp.Code, scanResp.Msg)
+		return
+	}
+
+	entries = make([]kvrpc.Entry, len(scanResp.Entries))
+	for i, entry := range scanResp.Entries {
+		meta := kvrpc.VMetaResp{ExpiresAt: entry.Meta.ExpiresAt, Tag: byte(entry.Meta.Tag)}
+		entries[i] = kvrpc.Entry{Key: entry.Key, Value: entry.Value, Meta: meta}
+		entry.Key = nil
+		entry.Value = nil
+	}
+
+	return
+}
+
+func parseScanResp(resp qrpc.Response) (entries []kvrpc.Entry, err error) {
+	frame, err := resp.GetFrame()
+	if err != nil {
+		return
+	}
+
+	entries, err = parseScanRespFromFrame(frame)
+	return
+}
+
+func scanOption2Bytes(option kvrpc.ScanOption) (bytes []byte) {
+	pso := &pb.ProviderScanOption{Reverse: option.Reverse, Prefix: option.Prefix, Offset: option.Offset}
+	req := pb.ScanRequest{ProviderScanOption: pso, Limit: int32(option.Limit)}
+	bytes, _ = req.Marshal()
+	return
+}
+
+// Scan for implement kvrpc.Client
+func (c *Client) Scan(option kvrpc.ScanOption) (entries []kvrpc.Entry, err error) {
+	if option.Limit <= 0 {
+		return
+	}
+
+	if option.Limit > kvrpc.MaxEntry {
+		option.Limit = kvrpc.MaxEntry
+	}
+
+	bytes := scanOption2Bytes(option)
+
+	_, resp, err := c.con.Request(server.ScanCmd, qrpc.NBFlag, bytes)
+	if err != nil {
+		return
+	}
+
+	entries, err = parseScanResp(resp)
 
 	return
 }

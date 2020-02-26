@@ -36,7 +36,7 @@ func (b *Badger) Close() (err error) {
 }
 
 // NewTransaction creates a transaction object
-func (b *Badger) NewTransaction(update bool) kvrpc.Txn {
+func (b *Badger) NewTransaction(update bool) kvrpc.ProviderTxn {
 	return (*Txn)(b.db.NewTransaction(update))
 }
 
@@ -92,5 +92,47 @@ func (b *Badger) Delete(key []byte) (err error) {
 		return
 	}
 	err = txn.Commit()
+	return
+}
+
+// Scan over keys specified by option
+func (b *Badger) Scan(option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
+	txn := b.db.NewTransaction(false)
+	defer txn.Discard()
+
+	err = scanByBadgerTxn(txn, option, fn)
+
+	return
+}
+
+func scanByBadgerTxn(txn *badger.Txn, option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
+	iterOpts := badger.DefaultIteratorOptions
+	iterOpts.Reverse = option.Reverse
+
+	if len(option.Prefix) > 0 {
+		iterOpts.Prefix = option.Prefix
+	}
+
+	iter := txn.NewIterator(iterOpts)
+	defer iter.Close()
+
+	if option.Offset != nil {
+		iter.Seek(option.Offset)
+	} else {
+		iter.Rewind()
+	}
+
+	var goon bool
+	for ; iter.Valid(); iter.Next() {
+		item := iter.Item()
+
+		err = item.Value(func(val []byte) error {
+			goon = fn(item.Key(), val, kvrpc.VMetaResp{ExpiresAt: item.ExpiresAt(), Tag: item.UserMeta()})
+			return nil
+		})
+		if err != nil || !goon {
+			break
+		}
+	}
 	return
 }

@@ -14,7 +14,7 @@ import (
 func handleTxnContinuedFrame(
 	writer qrpc.FrameWriter,
 	frame *qrpc.RequestFrame,
-	txn kvrpc.Txn) {
+	txn kvrpc.ProviderTxn) {
 	var (
 		getReq     pb.GetRequest
 		getResp    pb.GetResponse
@@ -22,6 +22,8 @@ func handleTxnContinuedFrame(
 		deleteResp pb.DeleteResponse
 		setReq     pb.SetRequest
 		setResp    pb.SetResponse
+		scanReq    pb.ScanRequest
+		scanResp   pb.ScanResponse
 		commitResp pb.CommitResponse
 		err        error
 		close      bool
@@ -68,7 +70,7 @@ func handleTxnContinuedFrame(
 				getResp.Code = CodeInvalidRequest
 				getResp.Msg = err.Error()
 			} else {
-				handleTxnGet(txn, &getReq, &getResp)
+				handleGet(txn, &getReq, &getResp)
 			}
 
 			{
@@ -106,6 +108,29 @@ func handleTxnContinuedFrame(
 				frame.Close()
 				return
 			}
+		case ScanCmd:
+			close = false
+			err = scanReq.Unmarshal(nextFrame.Payload)
+			if err != nil {
+				close = true
+				scanResp.Code = CodeInvalidRequest
+				scanResp.Msg = err.Error()
+			} else {
+				handleScan(txn, &scanReq, &scanResp)
+			}
+
+			{
+				bytes, _ := scanResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, ScanRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("ScanCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+			if close {
+				frame.Close()
+				return
+			}
 		case CommitCmd:
 			handleTxnCommit(txn, &commitResp)
 			{
@@ -127,7 +152,7 @@ func handleTxnContinuedFrame(
 	}
 }
 
-func handleTxnSet(txn kvrpc.Txn, req *pb.SetRequest, resp *pb.SetResponse) {
+func handleTxnSet(txn kvrpc.ProviderTxn, req *pb.SetRequest, resp *pb.SetResponse) {
 	meta := metaFromSetRequest(req)
 	err := txn.Set(req.Key, req.Value, meta)
 	if err != nil {
@@ -162,27 +187,8 @@ func handleSet(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
 	resp.Msg = ""
 }
 
-func handleTxnGet(txn kvrpc.Txn, req *pb.GetRequest, resp *pb.GetResponse) {
-	value, meta, err := txn.Get(req.Key)
-	if err != nil {
-		if err == provider.ErrKeyNotFound {
-			resp.Code = CodeKeyNotFound
-			resp.Msg = err.Error()
-		} else {
-			resp.Code = CodeInternalError
-			resp.Msg = err.Error()
-		}
-		return
-	}
-
-	resp.Code = CodeOK
-	resp.Msg = ""
-	resp.Value = value
-	resp.Meta = &pb.VMetaResp{ExpiresAt: meta.ExpiresAt, Tag: uint32(meta.Tag)}
-}
-
-func handleGet(kvdb kvrpc.KVDB, req *pb.GetRequest, resp *pb.GetResponse) {
-	value, meta, err := kvdb.Get(req.Key)
+func handleGet(kvop kvrpc.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse) {
+	value, meta, err := kvop.Get(req.Key)
 	if err != nil {
 		if err == provider.ErrKeyNotFound {
 			resp.Code = CodeKeyNotFound
@@ -213,7 +219,7 @@ func handleDelete(kvdb kvrpc.KVDB, req *pb.DeleteRequest, resp *pb.DeleteRespons
 	resp.Msg = ""
 }
 
-func handleTxnDelete(txn kvrpc.Txn, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
+func handleTxnDelete(txn kvrpc.ProviderTxn, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
 	err := txn.Delete(req.Key)
 	if err != nil {
 		if err == provider.ErrTxnTooBig {
@@ -230,7 +236,49 @@ func handleTxnDelete(txn kvrpc.Txn, req *pb.DeleteRequest, resp *pb.DeleteRespon
 	resp.Msg = ""
 }
 
-func handleTxnCommit(txn kvrpc.Txn, resp *pb.CommitResponse) {
+func copyBytes(in []byte) (out []byte) {
+	out = make([]byte, len(in))
+	copy(out, in)
+	return
+}
+
+func handleScan(kvop kvrpc.ProviderKVOP, req *pb.ScanRequest, resp *pb.ScanResponse) {
+	pso := req.ProviderScanOption
+	option := kvrpc.ProviderScanOption{Reverse: pso.Reverse, Prefix: pso.Prefix, Offset: pso.Offset}
+	limit := int(req.Limit)
+	if limit == 0 {
+		goto DONE
+	}
+	if limit > kvrpc.MaxEntry {
+		limit = kvrpc.MaxEntry
+	}
+
+	{
+		err := kvop.Scan(option, func(key, value []byte, meta kvrpc.VMetaResp) bool {
+			keyCopy := copyBytes(key)
+			valueCopy := copyBytes(value)
+			pbMeta := &pb.VMetaResp{ExpiresAt: meta.ExpiresAt, Tag: uint32(meta.Tag)}
+			resp.Entries = append(resp.Entries, &pb.Entry{Key: keyCopy, Value: valueCopy, Meta: pbMeta})
+
+			if len(resp.Entries) >= limit {
+				return false
+			}
+			return true
+		})
+
+		if err != nil {
+			resp.Code = CodeInternalError
+			resp.Msg = err.Error()
+			return
+		}
+	}
+
+DONE:
+	resp.Code = CodeOK
+	resp.Msg = ""
+}
+
+func handleTxnCommit(txn kvrpc.ProviderTxn, resp *pb.CommitResponse) {
 	err := txn.Commit()
 	if err != nil {
 		resp.Code = CodeInternalError
@@ -241,6 +289,7 @@ func handleTxnCommit(txn kvrpc.Txn, resp *pb.CommitResponse) {
 	resp.Code = CodeOK
 	resp.Msg = ""
 }
+
 func metaFromSetRequest(req *pb.SetRequest) *kvrpc.VMetaReq {
 	if req.Meta == nil {
 		return nil
