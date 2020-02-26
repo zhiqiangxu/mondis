@@ -1,6 +1,8 @@
 # kvrpc, a universal rpc layer for key value database
 
-**Any** key value database just has to implement the `kvrpc.KVDB` interface in order to be integrated into kvrpc, all vendors are under `provider/` directory, now only `badger` support is implemented, but it's trivial to add new ones.
+`kvrpc` provides a universal client api to a key value database, named `Set`/`Get`/`Delete`/`Scan`, transaction is supported with `Update` and `View` method, refer to [`kvrpc.Client`](https://github.com/zhiqiangxu/kvrpc/blob/master/kvrpc.go#L6) or [`test cases`](https://github.com/zhiqiangxu/kvrpc/blob/master/test/sit_test.go) for details.
+
+**Any** key value database provider just has to implement the [`kvrpc.KVDB`](https://github.com/zhiqiangxu/kvrpc/blob/master/provider.go#L8) interface in order to be integrated into `kvrpc`, all providers are under `provider/` directory, now only `badger` support is implemented, but it's trivial to add new ones.
 
 `kvrpc` is based on [`qrpc`](https://github.com/zhiqiangxu/qrpc).
 
