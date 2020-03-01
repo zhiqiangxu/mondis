@@ -1,8 +1,19 @@
-# kvrpc, a universal rpc layer for key value database
+# kvrpc ≈ redis + mongodb
 
-`kvrpc` provides a universal client api to a key value database, named `Set`/`Get`/`Delete`/`Scan`, transaction is supported with `Update` and `View` method, refer to [`kvrpc.Client`](https://github.com/zhiqiangxu/kvrpc/blob/master/kvrpc.go#L6) or [`test cases`](https://github.com/zhiqiangxu/kvrpc/blob/master/test/sit_test.go) for details.
+`kvrpc` aimed to be a universal rpc layer for any key value database, but as it evolves, `kvrpc` now also aims to bridge the gap between a document-oriented database and a key value database!
 
-**Any** key value database provider just has to implement the [`kvrpc.KVDB`](https://github.com/zhiqiangxu/kvrpc/blob/master/provider.go#L8) interface in order to be integrated into `kvrpc`, all providers are under `provider/` directory, now only `badger` support is implemented, but it's trivial to add new ones.
+## Features:
+
+1. complete key value database api
+    1. `Set`
+    2. `Get`
+    3. `Delete`
+    4. `Scan`
+    5. `Update` (writable transaction)
+    6. `View`   (readonly transaction)
+2. document-oriented database api like mongodb (in progress)
+
+Refer to [`kvrpc.Client`](https://github.com/zhiqiangxu/kvrpc/blob/master/kvrpc.go#L6) or [`test cases`](https://github.com/zhiqiangxu/kvrpc/blob/master/test/sit_test.go) for details.
 
 `kvrpc` is based on [`qrpc`](https://github.com/zhiqiangxu/qrpc).
 
