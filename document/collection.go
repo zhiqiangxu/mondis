@@ -193,7 +193,7 @@ func (c *Collection) DeleteOne(did int64, txn kvrpc.ProviderTxn) (err error) {
 
 }
 
-// GetOne for get a document in collection
+// GetOne for get a document by document id
 func (c *Collection) GetOne(did int64, txn kvrpc.ProviderTxn) (data bson.M, err error) {
 	// prologue start
 	err = c.db.checkState()
@@ -222,6 +222,47 @@ func (c *Collection) GetOne(did int64, txn kvrpc.ProviderTxn) (data bson.M, err 
 	}
 
 	err = bson.Unmarshal(v, &data)
+	return
+}
+
+// GetMany for get many documents by document id list
+func (c *Collection) GetMany(dids []int64, txn kvrpc.ProviderTxn) (datas []bson.M, err error) {
+	// prologue start
+	err = c.db.checkState()
+	if err != nil {
+		return
+	}
+	err = c.db.closer.Add(1)
+	if err != nil {
+		return
+	}
+	defer c.db.closer.Done()
+	// prologue end
+
+	if txn == nil {
+		txn = c.kvdb.NewTransaction(false)
+		defer txn.Discard()
+	}
+
+	var v []byte
+	for _, did := range dids {
+		docKey := GetCollectionDocumentKey(c.cid, did)
+		v, _, err = txn.Get(docKey)
+		if err == provider.ErrKeyNotFound {
+			err = ErrDocNotFound
+			return
+		}
+		if err != nil {
+			return
+		}
+		var data bson.M
+		err = bson.Unmarshal(v, &data)
+		if err != nil {
+			return
+		}
+
+		datas = append(datas, data)
+	}
 	return
 }
 
