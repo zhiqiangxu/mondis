@@ -81,6 +81,50 @@ func (c *Client) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 	return
 }
 
+func parseExistsResp(resp qrpc.Response) (exists bool, err error) {
+	frame, err := resp.GetFrame()
+	if err != nil {
+		return
+	}
+
+	exists, err = parseExistsRespFromFrame(frame)
+	return
+}
+
+func parseExistsRespFromFrame(respFrame *qrpc.Frame) (exists bool, err error) {
+	var existsResp pb.ExistsResponse
+	err = existsResp.Unmarshal(respFrame.Payload)
+	if err != nil {
+		return
+	}
+
+	if existsResp.Code != 0 {
+
+		err = newPBError(existsResp.Code, existsResp.Msg)
+
+		return
+	}
+
+	exists = existsResp.Exists
+
+	return
+}
+
+// Exists for implement kvrpc.Client
+func (c *Client) Exists(k []byte) (exists bool, err error) {
+	req := pb.ExistsRequest{Key: k}
+	bytes, _ := req.Marshal()
+
+	_, resp, err := c.con.Request(server.ExistsCmd, qrpc.NBFlag, bytes)
+	if err != nil {
+		return
+	}
+
+	exists, err = parseExistsResp(resp)
+
+	return
+}
+
 func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error) {
 	frame, err := resp.GetFrame()
 	if err != nil {

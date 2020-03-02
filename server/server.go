@@ -29,6 +29,7 @@ func New(addr string, kvdb kvrpc.KVDB, option Option, kvoption kvrpc.KVOption) K
 
 	mux := qrpc.NewServeMux()
 	mux.Handle(SetCmd, &CmdSet{s})
+	mux.Handle(ExistsCmd, &CmdExists{s})
 	mux.Handle(GetCmd, &CmdGet{s})
 	mux.Handle(DeleteCmd, &CmdDelete{s})
 	mux.Handle(ScanCmd, &CmdScan{s})

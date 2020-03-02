@@ -33,7 +33,7 @@ func (m *SetRequest) Reset()         { *m = SetRequest{} }
 func (m *SetRequest) String() string { return proto.CompactTextString(m) }
 func (*SetRequest) ProtoMessage()    {}
 func (*SetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{0}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{0}
 }
 func (m *SetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -95,7 +95,7 @@ func (m *SetResponse) Reset()         { *m = SetResponse{} }
 func (m *SetResponse) String() string { return proto.CompactTextString(m) }
 func (*SetResponse) ProtoMessage()    {}
 func (*SetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{1}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{1}
 }
 func (m *SetResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -149,7 +149,7 @@ func (m *GetRequest) Reset()         { *m = GetRequest{} }
 func (m *GetRequest) String() string { return proto.CompactTextString(m) }
 func (*GetRequest) ProtoMessage()    {}
 func (*GetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{2}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{2}
 }
 func (m *GetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -199,7 +199,7 @@ func (m *GetResponse) Reset()         { *m = GetResponse{} }
 func (m *GetResponse) String() string { return proto.CompactTextString(m) }
 func (*GetResponse) ProtoMessage()    {}
 func (*GetResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{3}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{3}
 }
 func (m *GetResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -256,6 +256,116 @@ func (m *GetResponse) GetMeta() *VMetaResp {
 	return nil
 }
 
+type ExistsRequest struct {
+	Key                  []byte   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExistsRequest) Reset()         { *m = ExistsRequest{} }
+func (m *ExistsRequest) String() string { return proto.CompactTextString(m) }
+func (*ExistsRequest) ProtoMessage()    {}
+func (*ExistsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{4}
+}
+func (m *ExistsRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExistsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ExistsRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *ExistsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExistsRequest.Merge(dst, src)
+}
+func (m *ExistsRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExistsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExistsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExistsRequest proto.InternalMessageInfo
+
+func (m *ExistsRequest) GetKey() []byte {
+	if m != nil {
+		return m.Key
+	}
+	return nil
+}
+
+type ExistsResponse struct {
+	Code                 int32    `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Msg                  string   `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Exists               bool     `protobuf:"varint,3,opt,name=exists,proto3" json:"exists,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExistsResponse) Reset()         { *m = ExistsResponse{} }
+func (m *ExistsResponse) String() string { return proto.CompactTextString(m) }
+func (*ExistsResponse) ProtoMessage()    {}
+func (*ExistsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{5}
+}
+func (m *ExistsResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ExistsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ExistsResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *ExistsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExistsResponse.Merge(dst, src)
+}
+func (m *ExistsResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ExistsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExistsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExistsResponse proto.InternalMessageInfo
+
+func (m *ExistsResponse) GetCode() int32 {
+	if m != nil {
+		return m.Code
+	}
+	return 0
+}
+
+func (m *ExistsResponse) GetMsg() string {
+	if m != nil {
+		return m.Msg
+	}
+	return ""
+}
+
+func (m *ExistsResponse) GetExists() bool {
+	if m != nil {
+		return m.Exists
+	}
+	return false
+}
+
 type DeleteRequest struct {
 	Key                  []byte   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -267,7 +377,7 @@ func (m *DeleteRequest) Reset()         { *m = DeleteRequest{} }
 func (m *DeleteRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteRequest) ProtoMessage()    {}
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{4}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{6}
 }
 func (m *DeleteRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -315,7 +425,7 @@ func (m *DeleteResponse) Reset()         { *m = DeleteResponse{} }
 func (m *DeleteResponse) String() string { return proto.CompactTextString(m) }
 func (*DeleteResponse) ProtoMessage()    {}
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{5}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{7}
 }
 func (m *DeleteResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -370,7 +480,7 @@ func (m *VMetaReq) Reset()         { *m = VMetaReq{} }
 func (m *VMetaReq) String() string { return proto.CompactTextString(m) }
 func (*VMetaReq) ProtoMessage()    {}
 func (*VMetaReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{6}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{8}
 }
 func (m *VMetaReq) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +535,7 @@ func (m *VMetaResp) Reset()         { *m = VMetaResp{} }
 func (m *VMetaResp) String() string { return proto.CompactTextString(m) }
 func (*VMetaResp) ProtoMessage()    {}
 func (*VMetaResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{7}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{9}
 }
 func (m *VMetaResp) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -480,7 +590,7 @@ func (m *CommitResponse) Reset()         { *m = CommitResponse{} }
 func (m *CommitResponse) String() string { return proto.CompactTextString(m) }
 func (*CommitResponse) ProtoMessage()    {}
 func (*CommitResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{8}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{10}
 }
 func (m *CommitResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -535,7 +645,7 @@ func (m *ScanRequest) Reset()         { *m = ScanRequest{} }
 func (m *ScanRequest) String() string { return proto.CompactTextString(m) }
 func (*ScanRequest) ProtoMessage()    {}
 func (*ScanRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{9}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{11}
 }
 func (m *ScanRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -591,7 +701,7 @@ func (m *ProviderScanOption) Reset()         { *m = ProviderScanOption{} }
 func (m *ProviderScanOption) String() string { return proto.CompactTextString(m) }
 func (*ProviderScanOption) ProtoMessage()    {}
 func (*ProviderScanOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{10}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{12}
 }
 func (m *ProviderScanOption) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -654,7 +764,7 @@ func (m *Entry) Reset()         { *m = Entry{} }
 func (m *Entry) String() string { return proto.CompactTextString(m) }
 func (*Entry) ProtoMessage()    {}
 func (*Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{11}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{13}
 }
 func (m *Entry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -717,7 +827,7 @@ func (m *ScanResponse) Reset()         { *m = ScanResponse{} }
 func (m *ScanResponse) String() string { return proto.CompactTextString(m) }
 func (*ScanResponse) ProtoMessage()    {}
 func (*ScanResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_kvrpc_6f33e5674e44f379, []int{12}
+	return fileDescriptor_kvrpc_58658a801803ea40, []int{14}
 }
 func (m *ScanResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -772,6 +882,8 @@ func init() {
 	proto.RegisterType((*SetResponse)(nil), "pb.SetResponse")
 	proto.RegisterType((*GetRequest)(nil), "pb.GetRequest")
 	proto.RegisterType((*GetResponse)(nil), "pb.GetResponse")
+	proto.RegisterType((*ExistsRequest)(nil), "pb.ExistsRequest")
+	proto.RegisterType((*ExistsResponse)(nil), "pb.ExistsResponse")
 	proto.RegisterType((*DeleteRequest)(nil), "pb.DeleteRequest")
 	proto.RegisterType((*DeleteResponse)(nil), "pb.DeleteResponse")
 	proto.RegisterType((*VMetaReq)(nil), "pb.VMetaReq")
@@ -925,6 +1037,75 @@ func (m *GetResponse) MarshalTo(dAtA []byte) (int, error) {
 			return 0, err
 		}
 		i += n2
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ExistsRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExistsRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Key) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintKvrpc(dAtA, i, uint64(len(m.Key)))
+		i += copy(dAtA[i:], m.Key)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ExistsResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ExistsResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Code != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintKvrpc(dAtA, i, uint64(m.Code))
+	}
+	if len(m.Msg) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintKvrpc(dAtA, i, uint64(len(m.Msg)))
+		i += copy(dAtA[i:], m.Msg)
+	}
+	if m.Exists {
+		dAtA[i] = 0x18
+		i++
+		if m.Exists {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -1327,6 +1508,38 @@ func (m *GetResponse) Size() (n int) {
 	if m.Meta != nil {
 		l = m.Meta.Size()
 		n += 1 + l + sovKvrpc(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ExistsRequest) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Key)
+	if l > 0 {
+		n += 1 + l + sovKvrpc(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ExistsResponse) Size() (n int) {
+	var l int
+	_ = l
+	if m.Code != 0 {
+		n += 1 + sovKvrpc(uint64(m.Code))
+	}
+	l = len(m.Msg)
+	if l > 0 {
+		n += 1 + l + sovKvrpc(uint64(l))
+	}
+	if m.Exists {
+		n += 2
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1969,6 +2182,207 @@ func (m *GetResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipKvrpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthKvrpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ExistsRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowKvrpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExistsRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExistsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKvrpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthKvrpc
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
+			if m.Key == nil {
+				m.Key = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipKvrpc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthKvrpc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ExistsResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowKvrpc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ExistsResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ExistsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			m.Code = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKvrpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Code |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Msg", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKvrpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthKvrpc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Msg = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Exists", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKvrpc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Exists = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipKvrpc(dAtA[iNdEx:])
@@ -3066,35 +3480,36 @@ var (
 	ErrIntOverflowKvrpc   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("kvrpc.proto", fileDescriptor_kvrpc_6f33e5674e44f379) }
+func init() { proto.RegisterFile("kvrpc.proto", fileDescriptor_kvrpc_58658a801803ea40) }
 
-var fileDescriptor_kvrpc_6f33e5674e44f379 = []byte{
-	// 419 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x53, 0x4d, 0x6b, 0xdb, 0x40,
-	0x10, 0x45, 0x91, 0x94, 0x44, 0x23, 0x39, 0x94, 0xa5, 0x04, 0x1d, 0x8a, 0x90, 0xd5, 0x8b, 0x4f,
-	0x3a, 0x38, 0x90, 0x4b, 0x4f, 0xfd, 0x48, 0x73, 0x49, 0x69, 0xd9, 0x84, 0x40, 0x2f, 0x05, 0xd9,
-	0x19, 0x97, 0xc5, 0x96, 0x76, 0xbd, 0xbb, 0x16, 0xf6, 0x3f, 0xec, 0xb1, 0x3f, 0xa1, 0xf8, 0x97,
-	0x94, 0x5d, 0x49, 0xb5, 0x4b, 0xd5, 0x52, 0xdd, 0xe6, 0x43, 0xf3, 0xf6, 0xbd, 0x99, 0x27, 0x08,
-	0x97, 0xb5, 0x14, 0xf3, 0x5c, 0x48, 0xae, 0x39, 0x39, 0x11, 0xb3, 0xec, 0x11, 0xe0, 0x1e, 0x35,
-	0xc5, 0xf5, 0x06, 0x95, 0x26, 0xcf, 0xc0, 0x5d, 0xe2, 0x2e, 0x76, 0x52, 0x67, 0x12, 0x51, 0x13,
-	0x92, 0xe7, 0xe0, 0xd7, 0xc5, 0x6a, 0x83, 0xf1, 0x89, 0xad, 0x35, 0x09, 0x49, 0xc1, 0x2b, 0x51,
-	0x17, 0xb1, 0x9b, 0x3a, 0x93, 0x70, 0x1a, 0xe5, 0x62, 0x96, 0x3f, 0x7e, 0x40, 0x5d, 0x50, 0x5c,
-	0x53, 0xdb, 0xc9, 0xae, 0x20, 0xb4, 0xb8, 0x4a, 0xf0, 0x4a, 0x21, 0x21, 0xe0, 0xcd, 0xf9, 0x13,
-	0x5a, 0x64, 0x9f, 0xda, 0xd8, 0x3c, 0x56, 0xaa, 0xaf, 0x16, 0x38, 0xa0, 0x26, 0xcc, 0x12, 0x80,
-	0xdb, 0x7f, 0x90, 0xc9, 0x56, 0x10, 0xde, 0x0e, 0x05, 0x3d, 0x28, 0x70, 0x8f, 0x15, 0x8c, 0x5b,
-	0x05, 0x9e, 0x55, 0x30, 0x3a, 0x52, 0xa0, 0x44, 0x2b, 0x61, 0x0c, 0xa3, 0x77, 0xb8, 0x42, 0x8d,
-	0x7f, 0x27, 0x74, 0x0d, 0x17, 0xdd, 0x27, 0x83, 0x84, 0xe6, 0x70, 0xde, 0xed, 0xcb, 0x74, 0x1f,
-	0x1e, 0xee, 0xec, 0x80, 0x4b, 0x4d, 0x68, 0x2b, 0x45, 0xf3, 0xfd, 0x88, 0x9a, 0x30, 0x7b, 0x05,
-	0xc1, 0x2f, 0x76, 0xe4, 0x05, 0x04, 0x37, 0x5b, 0xc1, 0x24, 0xaa, 0xd7, 0xda, 0x8e, 0x79, 0xf4,
-	0x50, 0xe8, 0x19, 0xbe, 0x86, 0x8b, 0xb7, 0xbc, 0x2c, 0xd9, 0xd0, 0x6b, 0x2c, 0x21, 0xbc, 0x9f,
-	0x17, 0x55, 0xa7, 0xfe, 0x3d, 0x90, 0x4f, 0x92, 0xd7, 0xec, 0x09, 0xa5, 0x29, 0x7f, 0x14, 0x9a,
-	0xf1, 0xca, 0x42, 0x84, 0xd3, 0x4b, 0xb3, 0xbf, 0x3f, 0xbb, 0xb4, 0x67, 0xc2, 0xdc, 0xe3, 0x8e,
-	0x95, 0x4c, 0xdb, 0xa7, 0x7c, 0xda, 0x24, 0xd9, 0x97, 0x3e, 0x74, 0x12, 0xc3, 0x99, 0xc4, 0x1a,
-	0xa5, 0x6a, 0xb8, 0x9e, 0xd3, 0x2e, 0x25, 0x97, 0x70, 0x2a, 0x24, 0x2e, 0xd8, 0xb6, 0x35, 0x66,
-	0x9b, 0x99, 0x3a, 0x5f, 0x2c, 0x14, 0xea, 0xf6, 0xdc, 0x6d, 0x96, 0x51, 0xf0, 0x6f, 0x2a, 0x2d,
-	0x77, 0xff, 0x6d, 0xf1, 0xf1, 0x6f, 0x16, 0xef, 0x35, 0xc8, 0x67, 0x88, 0x9a, 0x05, 0x0d, 0xf2,
-	0xe3, 0x4b, 0x38, 0xc3, 0x4a, 0x4b, 0x86, 0x2a, 0x76, 0x53, 0x77, 0x12, 0x4e, 0x03, 0x83, 0x6d,
-	0xc9, 0xd1, 0xae, 0xf3, 0x26, 0xfa, 0xb6, 0x4f, 0x9c, 0xef, 0xfb, 0xc4, 0xf9, 0xb1, 0x4f, 0x9c,
-	0xd9, 0xa9, 0xfd, 0x5f, 0xaf, 0x7e, 0x06, 0x00, 0x00, 0xff, 0xff, 0x27, 0x22, 0xdb, 0x75, 0xbe,
-	0x03, 0x00, 0x00,
+var fileDescriptor_kvrpc_58658a801803ea40 = []byte{
+	// 444 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcd, 0x6a, 0xdb, 0x40,
+	0x10, 0x46, 0x91, 0x9d, 0xd8, 0x23, 0xd9, 0x94, 0xa5, 0x04, 0x1d, 0x8a, 0xb0, 0xd5, 0x8b, 0x4f,
+	0x3a, 0x38, 0x90, 0x4b, 0x4f, 0xfd, 0x71, 0x73, 0x49, 0x7f, 0xd8, 0x84, 0x40, 0x2f, 0x05, 0xd9,
+	0x19, 0x97, 0xc5, 0x96, 0x76, 0xb3, 0xbb, 0x11, 0xce, 0x1b, 0xf6, 0xd8, 0x47, 0x28, 0x7e, 0x92,
+	0xb2, 0x23, 0xa9, 0x49, 0xa9, 0x5c, 0xaa, 0xdb, 0xfc, 0xec, 0x7c, 0x33, 0xdf, 0xee, 0x37, 0x0b,
+	0xc1, 0xa6, 0xd4, 0x6a, 0x95, 0x2a, 0x2d, 0xad, 0x64, 0x47, 0x6a, 0x99, 0xdc, 0x00, 0x5c, 0xa1,
+	0xe5, 0x78, 0x77, 0x8f, 0xc6, 0xb2, 0x67, 0xe0, 0x6f, 0xf0, 0x21, 0xf2, 0x26, 0xde, 0x2c, 0xe4,
+	0xce, 0x64, 0xcf, 0xa1, 0x5f, 0x66, 0xdb, 0x7b, 0x8c, 0x8e, 0x28, 0x56, 0x39, 0x6c, 0x02, 0xbd,
+	0x1c, 0x6d, 0x16, 0xf9, 0x13, 0x6f, 0x16, 0xcc, 0xc3, 0x54, 0x2d, 0xd3, 0x9b, 0x0f, 0x68, 0x33,
+	0x8e, 0x77, 0x9c, 0x32, 0xc9, 0x19, 0x04, 0x84, 0x6b, 0x94, 0x2c, 0x0c, 0x32, 0x06, 0xbd, 0x95,
+	0xbc, 0x45, 0x42, 0xee, 0x73, 0xb2, 0x5d, 0xb3, 0xdc, 0x7c, 0x23, 0xe0, 0x21, 0x77, 0x66, 0x12,
+	0x03, 0x5c, 0xfc, 0x63, 0x98, 0x64, 0x0b, 0xc1, 0x45, 0x57, 0xd0, 0x47, 0x06, 0xfe, 0x53, 0x06,
+	0xd3, 0x9a, 0x41, 0x8f, 0x18, 0x8c, 0x9e, 0x30, 0x30, 0xaa, 0xa6, 0x30, 0x85, 0xd1, 0x62, 0x27,
+	0x8c, 0x35, 0x87, 0x07, 0xfa, 0x08, 0xe3, 0xe6, 0x48, 0xa7, 0x99, 0x4e, 0xe1, 0x18, 0xa9, 0x8e,
+	0x86, 0x1a, 0xf0, 0xda, 0x73, 0x2d, 0xdf, 0xe1, 0x16, 0x2d, 0x1e, 0x6e, 0x79, 0x0e, 0xe3, 0xe6,
+	0x48, 0xa7, 0xbb, 0x4d, 0x61, 0xd0, 0x3c, 0x91, 0xcb, 0x5e, 0x5f, 0x5f, 0x52, 0x81, 0xcf, 0x9d,
+	0x49, 0x91, 0xac, 0x3a, 0x3f, 0xe2, 0xce, 0x4c, 0x5e, 0xc1, 0xf0, 0xf7, 0x85, 0xb0, 0x17, 0x30,
+	0x5c, 0xec, 0x94, 0xd0, 0x68, 0x5e, 0x5b, 0x2a, 0xeb, 0xf1, 0xc7, 0x40, 0x4b, 0xf1, 0x39, 0x8c,
+	0xdf, 0xca, 0x3c, 0x17, 0x5d, 0x05, 0xb0, 0x81, 0xe0, 0x6a, 0x95, 0x15, 0x0d, 0xfb, 0xf7, 0xc0,
+	0x3e, 0x6b, 0x59, 0x8a, 0x5b, 0xd4, 0x2e, 0xfc, 0x49, 0x59, 0x21, 0x0b, 0x82, 0x08, 0xe6, 0xa7,
+	0xee, 0xc9, 0xfe, 0xce, 0xf2, 0x96, 0x0a, 0x27, 0x81, 0x4b, 0x91, 0x0b, 0x4b, 0xad, 0xfa, 0xbc,
+	0x72, 0x92, 0xaf, 0x6d, 0xe8, 0x2c, 0x82, 0x13, 0x8d, 0x25, 0x6a, 0x53, 0xcd, 0x3a, 0xe0, 0x8d,
+	0xeb, 0x1e, 0x4d, 0x69, 0x5c, 0x8b, 0x5d, 0xbd, 0x0b, 0xb5, 0xe7, 0xe2, 0x72, 0xbd, 0x36, 0x68,
+	0x6b, 0x85, 0xd5, 0x5e, 0xc2, 0xa1, 0xbf, 0x28, 0xac, 0x7e, 0xf8, 0xef, 0xad, 0x9a, 0xfe, 0xb1,
+	0x55, 0xad, 0x9a, 0xfc, 0x02, 0x61, 0x75, 0x41, 0x9d, 0xe4, 0xf6, 0x12, 0x4e, 0xb0, 0xb0, 0x5a,
+	0xa0, 0xd3, 0x9b, 0x3f, 0x0b, 0xe6, 0x43, 0x87, 0x4d, 0xc3, 0xf1, 0x26, 0xf3, 0x26, 0xfc, 0xbe,
+	0x8f, 0xbd, 0x1f, 0xfb, 0xd8, 0xfb, 0xb9, 0x8f, 0xbd, 0xe5, 0x31, 0x7d, 0x11, 0x67, 0xbf, 0x02,
+	0x00, 0x00, 0xff, 0xff, 0x0e, 0xde, 0xa6, 0x63, 0x31, 0x04, 0x00, 0x00,
 }

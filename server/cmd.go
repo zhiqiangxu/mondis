@@ -7,6 +7,10 @@ const (
 	SetCmd qrpc.Cmd = iota
 	// SetRespCmd is resp for SetCmd
 	SetRespCmd
+	// ExistsCmd for exists
+	ExistsCmd
+	// ExistsRespCmd is resp for ExistsCmd
+	ExistsRespCmd
 	// GetCmd for get
 	GetCmd
 	// GetRespCmd is resp for GetCmd

@@ -25,6 +25,16 @@ message GetResponse {
     VMetaResp meta  =   4;
 }
 
+message ExistsRequest {
+    bytes key       =   1;
+}
+
+message ExistsResponse {
+    int32   code    =   1;
+    string  msg     =   2;
+    bool   exists   =   3;
+}
+
 message DeleteRequest {
     bytes key       =   1;
 }

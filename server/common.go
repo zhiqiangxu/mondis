@@ -22,6 +22,8 @@ func handleTxnContinuedFrame(
 		deleteResp pb.DeleteResponse
 		setReq     pb.SetRequest
 		setResp    pb.SetResponse
+		existsReq  pb.ExistsRequest
+		existsResp pb.ExistsResponse
 		scanReq    pb.ScanRequest
 		scanResp   pb.ScanResponse
 		commitResp pb.CommitResponse
@@ -55,6 +57,29 @@ func handleTxnContinuedFrame(
 				err = writeStreamRespBytes(writer, frame, SetRespCmd, bytes, false)
 				if err != nil {
 					logger.Instance().Error("SetCmd writeStreamRespBytes", zap.Error(err))
+					return
+				}
+			}
+			if close {
+				frame.Close()
+				return
+			}
+		case ExistsCmd:
+			close = false
+			err = existsReq.Unmarshal(nextFrame.Payload)
+			if err != nil {
+				close = true
+				existsResp.Code = CodeInvalidRequest
+				existsResp.Msg = err.Error()
+			} else {
+				handleExists(txn, &existsReq, &existsResp)
+			}
+
+			{
+				bytes, _ := existsResp.Marshal()
+				err = writeStreamRespBytes(writer, frame, ExistsRespCmd, bytes, false)
+				if err != nil {
+					logger.Instance().Error("ExistsCmd writeStreamRespBytes", zap.Error(err))
 					return
 				}
 			}
@@ -185,6 +210,21 @@ func handleSet(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
 
 	resp.Code = CodeOK
 	resp.Msg = ""
+}
+
+func handleExists(kvop kvrpc.ProviderKVOP, req *pb.ExistsRequest, resp *pb.ExistsResponse) {
+	exists, err := kvop.Exists(req.Key)
+	if err != nil {
+
+		resp.Code = CodeInternalError
+		resp.Msg = err.Error()
+
+		return
+	}
+
+	resp.Code = CodeOK
+	resp.Msg = ""
+	resp.Exists = exists
 }
 
 func handleGet(kvop kvrpc.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse) {

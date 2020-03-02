@@ -6,11 +6,12 @@
 
 1. complete key value database api
     1. `Set`
-    2. `Get`
-    3. `Delete`
-    4. `Scan`
-    5. `Update` (writable transaction)
-    6. `View`   (readonly transaction)
+    2. `Exists`
+    3. `Get`
+    4. `Delete`
+    5. `Scan`
+    6. `Update` (writable transaction)
+    7. `View`   (readonly transaction)
 2. document-oriented database api like mongodb (in progress)
 
 Refer to [`kvrpc.Client`](https://github.com/zhiqiangxu/kvrpc/blob/master/kvrpc.go#L6) or [`test cases`](https://github.com/zhiqiangxu/kvrpc/blob/master/test/sit_test.go) for details.

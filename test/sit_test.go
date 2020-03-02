@@ -33,12 +33,18 @@ func TestBadger(t *testing.T) {
 	// client side
 	{
 		c := client.New(addr, client.Option{})
+		nonExistingKey := []byte("nonExistingKey")
 
 		{
+			// test Exists
+			exists, err := c.Exists(nonExistingKey)
+			if err != nil || exists {
+				t.Fatal("Exists nonExistingKey1")
+			}
 			// test Set
 			key1 := []byte("key1")
 			value1 := []byte("value1")
-			err := c.Set(key1, value1, nil)
+			err = c.Set(key1, value1, nil)
 			if err != nil {
 				t.Fatal("Set key1")
 			}
@@ -86,6 +92,12 @@ func TestBadger(t *testing.T) {
 				if err != provider.ErrKeyNotFound {
 					t.Fatal("Update.Get key2")
 				}
+
+				// test Exists
+				exists, err := txn.Exists(nonExistingKey)
+				if err != nil || exists {
+					t.Fatal("Exists nonExistingKey2")
+				}
 				return nil
 			})
 			if err != nil {
@@ -105,6 +117,12 @@ func TestBadger(t *testing.T) {
 				v, _, err := txn.Get(key3)
 				if err != nil || !bytes.Equal(v, value3) {
 					t.Fatal("View Get key3", err)
+				}
+
+				// test Exists
+				exists, err := txn.Exists(nonExistingKey)
+				if err != nil || exists {
+					t.Fatal("Exists nonExistingKey3")
 				}
 				return nil
 			})

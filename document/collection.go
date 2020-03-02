@@ -2,42 +2,88 @@ package document
 
 import (
 	"github.com/zhiqiangxu/kvrpc"
+	"github.com/zhiqiangxu/util/logger"
 	"go.mongodb.org/mongo-driver/bson"
-)
-
-const (
-	basePrefix                = "_kvrpc_"
-	collectionPrefix          = basePrefix + "_c"
-	documentPrefix            = "_r"
-	indexPrefix               = "_i"
-	collectionDocumentPrefix  = collectionPrefix + documentPrefix
-	collectionIndexPrefix     = collectionPrefix + indexPrefix
-	metaPrefix                = basePrefix + "m"
-	sequencePrefix            = "_s"
-	metaSequencePrefix        = metaPrefix + sequencePrefix
-	reservedKeywordCollection = "collection"
-	collectionIDBandWidth     = 50
-	documentIDBandWidth       = 1000
+	"go.uber.org/zap"
 )
 
 // Collection is like mongo collection
 type Collection struct {
-	kvdb     kvrpc.KVDB
-	cid      int64
-	name     string
-	sequence *Sequence
+	db               *DB
+	kvdb             kvrpc.KVDB
+	cid              int64
+	name             string
+	documentSequence *Sequence
 }
 
-// NewCollection is ctor for Collection
-func NewCollection(kvdb kvrpc.KVDB, name string) (c *Collection, err error) {
+func newCollection(db *DB, cid int64, name string) (c *Collection) {
 
-	sequence, _ := NewSequence(kvdb, []byte(name), documentIDBandWidth)
-	c = &Collection{kvdb: kvdb, name: name, sequence: sequence}
+	kvdb := db.kvdb
+	documentSequence, _ := NewSequence(kvdb, []byte(name), documentIDBandWidth)
+	c = &Collection{db: db, kvdb: kvdb, cid: cid, name: name, documentSequence: documentSequence}
 	return
 }
 
 // InsertOne for insert a document into collection
-func (c *Collection) InsertOne(doc interface{}) (id int64, err error) {
-	bson.Marshal(doc)
+func (c *Collection) InsertOne(txn kvrpc.ProviderTxn, doc bson.M) (did int64, err error) {
+
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		return
+	}
+
+	// prologue start
+	err = c.db.checkState()
+	if err != nil {
+		return
+	}
+	err = c.db.closer.Add(1)
+	if err != nil {
+		return
+	}
+	defer c.db.closer.Done()
+	// prologue end
+
+	udid, err := c.documentSequence.Next()
+	if err != nil {
+		return
+	}
+	docKey := GetCollectionDocumentKey(c.cid, int64(udid))
+
+	err = txn.Set(docKey, data, nil)
+	if err != nil {
+		return
+	}
+
+	did = int64(udid)
 	return
+}
+
+// UpdateOne for update an existing document in collection
+func (c *Collection) UpdateOne(txn kvrpc.ProviderTxn, did int64, doc bson.M) (err error) {
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		return
+	}
+
+	// prologue start
+	err = c.db.checkState()
+	if err != nil {
+		return
+	}
+	err = c.db.closer.Add(1)
+	if err != nil {
+		return
+	}
+	defer c.db.closer.Done()
+	// prologue end
+
+	return
+}
+
+func (c *Collection) close() {
+	err := c.documentSequence.ReleaseRemaining()
+	if err != nil {
+		logger.Instance().Error("documentSequence.ReleaseRemaining", zap.Error(err))
+	}
 }

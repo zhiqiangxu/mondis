@@ -59,6 +59,24 @@ func (b *Badger) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 	return
 }
 
+// Exists checks whether k exists
+func (b *Badger) Exists(k []byte) (exists bool, err error) {
+	txn := b.db.NewTransaction(false)
+	defer txn.Discard()
+
+	_, err = txn.Get(k)
+	if err == badger.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	if err != nil {
+		return
+	}
+
+	exists = true
+	return
+}
+
 // Get v by k
 func (b *Badger) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	txn := b.db.NewTransaction(false)

@@ -168,6 +168,8 @@ github.com/zhiqiangxu/util v0.0.0-20200223133249-c15c59c527f0 h1:kUNo6S27WEztsLD
 github.com/zhiqiangxu/util v0.0.0-20200223133249-c15c59c527f0/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
 github.com/zhiqiangxu/util v0.0.0-20200228160954-211560992aca h1:YKdxwsNJfnUjGEhoyx36P4mKxl/6TdwM7cBHk+eoFlo=
 github.com/zhiqiangxu/util v0.0.0-20200228160954-211560992aca/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
+github.com/zhiqiangxu/util v0.0.0-20200302071207-374e3ebf3459 h1:81qHum7o9RDmBh8Ueyxd/dm4qrYpJ2bIgnvajVk8lS8=
+github.com/zhiqiangxu/util v0.0.0-20200302071207-374e3ebf3459/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
 go.mongodb.org/mongo-driver v1.3.0 h1:ew6uUIeJOo+qdUUv7LxFCUhtWmVv7ZV/Xuy4FAUsw2E=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
 go.uber.org/atomic v1.5.0 h1:OI5t8sDa1Or+q8AeE+yKeB/SDYioSHAgcVljj9JIETY=

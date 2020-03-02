@@ -94,6 +94,25 @@ func (txn *Txn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, err er
 	return
 }
 
+// Exists for implement kvrpc.Client
+func (txn *Txn) Exists(k []byte) (exists bool, err error) {
+	req := pb.ExistsRequest{Key: k}
+	bytes, _ := req.Marshal()
+
+	_, err = txn.request(server.ExistsCmd, bytes, false)
+	if err != nil {
+		return
+	}
+
+	respFrame, err := txn.getRespFrame()
+	if err != nil {
+		return
+	}
+
+	exists, err = parseExistsRespFromFrame(respFrame)
+	return
+}
+
 // Get for implement kvrpc.Txn
 func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}

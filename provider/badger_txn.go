@@ -24,6 +24,22 @@ func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 	return (*badger.Txn)(txn).SetEntry(entry)
 }
 
+// Exists checks whether k exists
+func (txn *Txn) Exists(k []byte) (exists bool, err error) {
+
+	_, err = (*badger.Txn)(txn).Get(k)
+	if err == badger.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	if err != nil {
+		return
+	}
+
+	exists = true
+	return
+}
+
 // Get for implement kvrpc.Txn
 func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 
