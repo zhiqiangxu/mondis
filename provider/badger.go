@@ -42,15 +42,10 @@ func (b *Badger) NewTransaction(update bool) kvrpc.ProviderTxn {
 
 // Set kv
 func (b *Badger) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
-	txn := b.db.NewTransaction(true)
+	txn := (*Txn)(b.db.NewTransaction(true))
 	defer txn.Discard()
 
-	if meta == nil {
-		err = txn.Set(k, v)
-	} else {
-		entry := badger.NewEntry(k, v).WithTTL(meta.TTL).WithMeta(meta.Tag)
-		err = txn.SetEntry(entry)
-	}
+	err = txn.Set(k, v, meta)
 	if err != nil {
 		return
 	}
@@ -61,42 +56,19 @@ func (b *Badger) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
 
 // Exists checks whether k exists
 func (b *Badger) Exists(k []byte) (exists bool, err error) {
-	txn := b.db.NewTransaction(false)
+	txn := (*Txn)(b.db.NewTransaction(false))
 	defer txn.Discard()
 
-	_, err = txn.Get(k)
-	if err == badger.ErrKeyNotFound {
-		err = nil
-		return
-	}
-	if err != nil {
-		return
-	}
-
-	exists = true
+	exists, err = txn.Exists(k)
 	return
 }
 
 // Get v by k
 func (b *Badger) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
-	txn := b.db.NewTransaction(false)
+	txn := (*Txn)(b.db.NewTransaction(false))
 	defer txn.Discard()
 
-	item, err := txn.Get(k)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			err = ErrKeyNotFound
-		}
-		return
-	}
-
-	v, err = item.ValueCopy(nil)
-	if err != nil {
-		return
-	}
-
-	meta.Tag = item.UserMeta()
-	meta.ExpiresAt = item.ExpiresAt()
+	v, meta, err = txn.Get(k)
 	return
 }
 
@@ -115,10 +87,10 @@ func (b *Badger) Delete(key []byte) (err error) {
 
 // Scan over keys specified by option
 func (b *Badger) Scan(option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
-	txn := b.db.NewTransaction(false)
+	txn := (*Txn)(b.db.NewTransaction(false))
 	defer txn.Discard()
 
-	err = scanByBadgerTxn(txn, option, fn)
+	err = txn.Scan(option, fn)
 
 	return
 }
