@@ -17,7 +17,7 @@ import (
 
 // DB defines a column db
 type DB struct {
-	sync.RWMutex
+	mu                 sync.RWMutex
 	once               sync.Once
 	state              uint32
 	closer             *closer.Strict
@@ -68,13 +68,13 @@ func (db *DB) Collection(name string) (collection *Collection, err error) {
 		return
 	}
 
-	db.RLock()
+	db.mu.RLock()
 	collection = db.collections[name]
 	if collection != nil {
-		db.RUnlock()
+		db.mu.RUnlock()
 		return
 	}
-	db.RUnlock()
+	db.mu.RUnlock()
 
 	err = db.closer.Add(1)
 	if err != nil {
@@ -82,19 +82,20 @@ func (db *DB) Collection(name string) (collection *Collection, err error) {
 	}
 	defer db.closer.Done()
 
-	cid, err := db.getCollectionID(name)
-	if err != nil {
-		return
-	}
-
-	db.Lock()
+	db.mu.Lock()
 	collection = db.collections[name]
 	if collection != nil {
-		db.Unlock()
+		db.mu.Unlock()
 		return
 	}
-	db.collections[name] = newCollection(db, cid, name)
-	db.Unlock()
+	cid, err := db.getCollectionID(name)
+	if err != nil {
+		db.mu.Unlock()
+		return
+	}
+	collection = newCollection(db, cid, name)
+	db.collections[name] = collection
+	db.mu.Unlock()
 
 	return
 }

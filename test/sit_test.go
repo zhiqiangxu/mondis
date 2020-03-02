@@ -8,8 +8,10 @@ import (
 
 	"github.com/zhiqiangxu/kvrpc"
 	"github.com/zhiqiangxu/kvrpc/client"
+	"github.com/zhiqiangxu/kvrpc/document"
 	"github.com/zhiqiangxu/kvrpc/provider"
 	"github.com/zhiqiangxu/kvrpc/server"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 const (
@@ -185,5 +187,59 @@ func TestBadger(t *testing.T) {
 		}
 
 	}
+
+}
+
+func TestDocument(t *testing.T) {
+	kvdb := provider.NewBadger()
+	err := kvdb.Open(kvrpc.KVOption{Dir: dataDir})
+	if err != nil {
+		t.Fatal("kvdb.Open", err)
+	}
+
+	db := document.NewDB(kvdb)
+
+	c, err := db.Collection("c")
+	if err != nil {
+		t.Fatal("db.Collection", err)
+	}
+
+	key := "key"
+	did, err := c.InsertOne(bson.M{key: "value"}, nil)
+	if err != nil {
+		t.Fatal("c.InsertOne", err)
+	}
+
+	data, err := c.GetOne(did, nil)
+	if err != nil {
+		t.Fatal("c.GetOne", err)
+	}
+	if data[key] != "value" {
+		t.Fatal("data[key] != \"value\"")
+	}
+
+	updated, err := c.UpdateOne(did, bson.M{key: "value2"}, nil)
+	if err != nil || !updated {
+		t.Fatal("c.InsertOne", err, updated)
+	}
+
+	data, err = c.GetOne(did, nil)
+	if err != nil {
+		t.Fatal("c.GetOne", err)
+	}
+	if data[key] != "value2" {
+		t.Fatal("data[key] != \"value2\"")
+	}
+
+	err = c.DeleteOne(did, nil)
+	if err != nil {
+		t.Fatal("c.DeleteOne", err)
+	}
+
+	_, err = c.GetOne(did, nil)
+	if err != document.ErrDocNotFound {
+		t.Fatal("err != document.ErrDocNotFound", err)
+	}
+	db.Close()
 
 }
