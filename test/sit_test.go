@@ -242,4 +242,9 @@ func TestDocument(t *testing.T) {
 	}
 	db.Close()
 
+	err = c.DeleteOne(did, nil)
+	if err != document.ErrAlreadyClosed {
+		t.Fatal("err != document.ErrAlreadyClosed")
+	}
+
 }
