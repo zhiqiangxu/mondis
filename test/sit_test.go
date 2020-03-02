@@ -204,6 +204,11 @@ func TestDocument(t *testing.T) {
 		t.Fatal("db.Collection", err)
 	}
 
+	n, err := c.DeleteAll(nil)
+	if err != nil {
+		t.Fatal("c.DeleteAll", err, n)
+	}
+
 	key := "key"
 	did, err := c.InsertOne(bson.M{key: "value"}, nil)
 	if err != nil {
@@ -229,6 +234,11 @@ func TestDocument(t *testing.T) {
 	}
 	if data[key] != "value2" {
 		t.Fatal("data[key] != \"value2\"")
+	}
+
+	n, err = c.Count(nil)
+	if err != nil || n != 1 {
+		t.Fatal("c.Count")
 	}
 
 	err = c.DeleteOne(did, nil)

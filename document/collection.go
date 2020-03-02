@@ -225,6 +225,56 @@ func (c *Collection) GetOne(did int64, txn kvrpc.ProviderTxn) (data bson.M, err 
 	return
 }
 
+// Count for total number of documents
+func (c *Collection) Count(txn kvrpc.ProviderTxn) (n int, err error) {
+	if txn == nil {
+		txn = c.kvdb.NewTransaction(false)
+		defer txn.Discard()
+	}
+
+	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, c.cid)
+	err = txn.Scan(kvrpc.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ kvrpc.VMetaResp) bool {
+		n++
+		return true
+	})
+	return
+}
+
+// DeleteAll for delete all documents of a collection
+func (c *Collection) DeleteAll(txn kvrpc.ProviderTxn) (n int, err error) {
+	var oneshot bool
+	if txn == nil {
+		oneshot = true
+		txn = c.kvdb.NewTransaction(true)
+		defer txn.Discard()
+	}
+
+	committed := 0
+	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, c.cid)
+	err = txn.Scan(kvrpc.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ kvrpc.VMetaResp) bool {
+		err = txn.Delete(append([]byte(nil), key...))
+		if err == provider.ErrTxnTooBig && oneshot {
+			err = txn.Commit()
+			if err == nil {
+				committed = n + 1
+			}
+		}
+		if err != nil {
+			return false
+		}
+		n++
+		return true
+	})
+
+	if err == nil && oneshot {
+		err = txn.Commit()
+		if err != nil {
+			n = committed
+		}
+	}
+	return
+}
+
 // GetMany for get many documents by document id list
 func (c *Collection) GetMany(dids []int64, txn kvrpc.ProviderTxn) (datas []bson.M, err error) {
 	// prologue start
