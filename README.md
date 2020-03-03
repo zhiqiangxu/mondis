@@ -4,7 +4,7 @@
 
 ## Features:
 
-1. complete key value database api
+1. full `key value database api`
     1. `Set`
     2. `Exists`
     3. `Get`
@@ -12,7 +12,7 @@
     5. `Scan`
     6. `Update` (writable transaction)
     7. `View`   (readonly transaction)
-2. document-oriented database api like mongodb (in progress)
+2. `document-oriented database api` like mongodb (in progress)
 
 Refer to [`mondis.Client`](https://github.com/zhiqiangxu/mondis/blob/master/mondis.go#L6) or [`test cases`](https://github.com/zhiqiangxu/mondis/blob/master/test/sit_test.go) for details.
 
@@ -20,7 +20,7 @@ Refer to [`mondis.Client`](https://github.com/zhiqiangxu/mondis/blob/master/mond
 
 ## Demo
 
-This is how to start a server for badger provider:
+This is how to start a server with a badger provider:
 
 ```golang
 package main
@@ -46,7 +46,7 @@ func main() {
 
 ```
 
-This is how to start the client:
+This is how to request the server from a client:
 
 ```golang
 package main
@@ -63,64 +63,48 @@ func main() {
     // test Set
     key1 := []byte("key1")
     value1 := []byte("value1")
-    err := c.Set(key1, value1, nil)
-    if err != nil {
-        panic("Set key1")
-    }
+    _ = c.Set(key1, value1, nil)
+    
 
     // test Get
-    v, _, err := c.Get(key1)
-    if err != nil || !bytes.Equal(v, value1) {
-        panic("Get key1")
+    v, _, _ := c.Get(key1)
+    if !bytes.Equal(v, value1) {
+        panic("return value not expected")
     }
 
     // test Delete
     err = c.Delete(key1)
-    if err != nil {
-        panic("Delete key1", err)
-    }
 
     // test Get when key not exists
     _, _, err = c.Get(key1)
     if err != provider.ErrKeyNotFound {
-        panic("Get key1")
+        panic("shoud got provider.ErrKeyNotFound if key not exists")
     }
 
     // test Update transaction
     key2 := []byte("key2")
     value2 := []byte("value2")
-    err = c.Update(func(txn mondis.Txn) error {
-        err := txn.Set(key2, value2, nil)
-        if err != nil {
-            panic("Update.Set key2")
+    _ = c.Update(func(txn mondis.Txn) error {
+        _ = txn.Set(key2, value2, nil)
+
+        v, _, _ := txn.Get(key2)
+        if !bytes.Equal(v, value2) {
+            panic("return value not expected")
         }
 
-        v, _, err := txn.Get(key2)
-        if err != nil || !bytes.Equal(v, value2) {
-            panic("Update.Get key2")
-        }
-
-        err = txn.Delete(key2)
-        if err != nil {
-            panic("Update.Delete key2")
-        }
+        _ = txn.Delete(key2)
         return nil
     })
-    if err != nil {
-        panic("Update")
-    }
+    
     
     // test Read transaction
     key3 := []byte("key3")
     value3 := []byte("value3")
     err = c.Set(key3, value3, nil)
-    if err != nil {
-        panic("Set key3")
-    }
     err = c.View(func(txn mondis.Txn) error {
-        v, _, err := txn.Get(key3)
-        if err != nil || !bytes.Equal(v, value3) {
-            panic("View Get key3")
+        v, _, _ := txn.Get(key3)
+        if !bytes.Equal(v, value3) {
+            panic("return value not expected")
         }
         return nil
     })
@@ -130,4 +114,6 @@ func main() {
 
 ```
 
-See how you can make use of different key value databases in a universal way? Enjoy it!
+The above shows how to use the `key value database api`.
+
+The `document-oriented database api` is under active development, so keep tuned!
