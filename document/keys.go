@@ -71,7 +71,3 @@ func AppendCIDKey(buf []byte, cname string) Key {
 	buf = append(buf, cname...)
 	return buf
 }
-
-func documentKey(cid uint64, pk uint64) []byte {
-	return memcomparable.EncodeUint64(memcomparable.EncodeUint64([]byte(collectionPrefix), cid), pk)
-}
