@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/zhiqiangxu/kvrpc/pb"
+	"github.com/zhiqiangxu/mondis/pb"
 	"github.com/zhiqiangxu/qrpc"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"

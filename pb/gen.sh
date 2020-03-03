@@ -4,6 +4,6 @@
 
 pushd "$(dirname "$0")"
 
-protoc --gogofast_out=. kvrpc.proto 
+protoc --gogofast_out=. mondis.proto 
 
 popd

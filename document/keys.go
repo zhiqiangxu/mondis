@@ -1,14 +1,14 @@
 package document
 
 import (
-	"github.com/zhiqiangxu/kvrpc/document/memcomparable"
+	"github.com/zhiqiangxu/mondis/document/memcomparable"
 )
 
 // Key for document database
 type Key []byte
 
 const (
-	basePrefix                = "_kvrpc_"
+	basePrefix                = "_md_"
 	collectionPrefix          = basePrefix + "c"
 	documentPrefix            = "_d" // stores all collection documents
 	indexPrefix               = "_i" // stores all collection indexes

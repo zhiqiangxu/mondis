@@ -2,14 +2,14 @@ package provider
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/zhiqiangxu/kvrpc"
+	"github.com/zhiqiangxu/mondis"
 )
 
-// Txn is kvrpc wrapper for badger.Txn
+// Txn is mondis wrapper for badger.Txn
 type Txn badger.Txn
 
-// Set for implement kvrpc.Txn
-func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
+// Set for implement mondis.Txn
+func (txn *Txn) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 	defer func() {
 		if err == badger.ErrTxnTooBig {
 			err = ErrTxnTooBig
@@ -40,8 +40,8 @@ func (txn *Txn) Exists(k []byte) (exists bool, err error) {
 	return
 }
 
-// Get for implement kvrpc.Txn
-func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
+// Get for implement mondis.Txn
+func (txn *Txn) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 
 	item, err := (*badger.Txn)(txn).Get(k)
 	if err != nil {
@@ -61,7 +61,7 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 	return
 }
 
-// Delete for implement kvrpc.Txn
+// Delete for implement mondis.Txn
 func (txn *Txn) Delete(key []byte) (err error) {
 	defer func() {
 		if err == badger.ErrTxnTooBig {
@@ -73,19 +73,19 @@ func (txn *Txn) Delete(key []byte) (err error) {
 	return
 }
 
-// Commit for implement kvrpc.Txn
+// Commit for implement mondis.Txn
 func (txn *Txn) Commit() (err error) {
 	err = (*badger.Txn)(txn).Commit()
 	return
 }
 
-// Discard for implement kvrpc.Txn
+// Discard for implement mondis.Txn
 func (txn *Txn) Discard() {
 	(*badger.Txn)(txn).Discard()
 }
 
 // Scan over keys specified by option
-func (txn *Txn) Scan(option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
+func (txn *Txn) Scan(option mondis.ProviderScanOption, fn func(key []byte, value []byte, meta mondis.VMetaResp) bool) (err error) {
 	err = scanByBadgerTxn((*badger.Txn)(txn), option, fn)
 
 	return

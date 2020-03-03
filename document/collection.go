@@ -3,8 +3,8 @@ package document
 import (
 	"errors"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/provider"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/util/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
@@ -13,7 +13,7 @@ import (
 // Collection is like mongo collection
 type Collection struct {
 	db               *DB
-	kvdb             kvrpc.KVDB
+	kvdb             mondis.KVDB
 	cid              int64
 	name             string
 	documentSequence *Sequence
@@ -28,7 +28,7 @@ func newCollection(db *DB, cid int64, name string) (c *Collection) {
 }
 
 // InsertOne for insert a document into collection
-func (c *Collection) InsertOne(doc bson.M, txn kvrpc.ProviderTxn) (did int64, err error) {
+func (c *Collection) InsertOne(doc bson.M, txn mondis.ProviderTxn) (did int64, err error) {
 
 	data, err := bson.Marshal(doc)
 	if err != nil {
@@ -85,12 +85,12 @@ var (
 )
 
 // UpdateOne for update an existing document in collection
-func (c *Collection) UpdateOne(did int64, doc bson.M, txn kvrpc.ProviderTxn) (updated bool, err error) {
+func (c *Collection) UpdateOne(did int64, doc bson.M, txn mondis.ProviderTxn) (updated bool, err error) {
 	updated, _, err = c.updateOne(did, doc, false, txn)
 	return
 }
 
-func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn kvrpc.ProviderTxn) (updated, isNew bool, err error) {
+func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.ProviderTxn) (updated, isNew bool, err error) {
 	data, err := bson.Marshal(doc)
 	if err != nil {
 		return
@@ -148,13 +148,13 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn kvrpc.Pro
 }
 
 // UpsertOne for upsert an existing document in collection
-func (c *Collection) UpsertOne(did int64, doc bson.M, txn kvrpc.ProviderTxn) (isNew bool, err error) {
+func (c *Collection) UpsertOne(did int64, doc bson.M, txn mondis.ProviderTxn) (isNew bool, err error) {
 	_, isNew, err = c.updateOne(did, doc, true, txn)
 	return
 }
 
 // DeleteOne for delete a document from collection
-func (c *Collection) DeleteOne(did int64, txn kvrpc.ProviderTxn) (err error) {
+func (c *Collection) DeleteOne(did int64, txn mondis.ProviderTxn) (err error) {
 
 	// prologue start
 	err = c.db.checkState()
@@ -194,7 +194,7 @@ func (c *Collection) DeleteOne(did int64, txn kvrpc.ProviderTxn) (err error) {
 }
 
 // GetOne for get a document by document id
-func (c *Collection) GetOne(did int64, txn kvrpc.ProviderTxn) (data bson.M, err error) {
+func (c *Collection) GetOne(did int64, txn mondis.ProviderTxn) (data bson.M, err error) {
 	// prologue start
 	err = c.db.checkState()
 	if err != nil {
@@ -226,14 +226,14 @@ func (c *Collection) GetOne(did int64, txn kvrpc.ProviderTxn) (data bson.M, err 
 }
 
 // Count for total number of documents
-func (c *Collection) Count(txn kvrpc.ProviderTxn) (n int, err error) {
+func (c *Collection) Count(txn mondis.ProviderTxn) (n int, err error) {
 	if txn == nil {
 		txn = c.kvdb.NewTransaction(false)
 		defer txn.Discard()
 	}
 
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, c.cid)
-	err = txn.Scan(kvrpc.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ kvrpc.VMetaResp) bool {
+	err = txn.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
 		n++
 		return true
 	})
@@ -241,7 +241,7 @@ func (c *Collection) Count(txn kvrpc.ProviderTxn) (n int, err error) {
 }
 
 // DeleteAll for delete all documents of a collection
-func (c *Collection) DeleteAll(txn kvrpc.ProviderTxn) (n int, err error) {
+func (c *Collection) DeleteAll(txn mondis.ProviderTxn) (n int, err error) {
 	var oneshot bool
 	if txn == nil {
 		oneshot = true
@@ -251,7 +251,7 @@ func (c *Collection) DeleteAll(txn kvrpc.ProviderTxn) (n int, err error) {
 
 	committed := 0
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, c.cid)
-	err = txn.Scan(kvrpc.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ kvrpc.VMetaResp) bool {
+	err = txn.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
 		err = txn.Delete(append([]byte(nil), key...))
 		if err == provider.ErrTxnTooBig && oneshot {
 			err = txn.Commit()
@@ -276,7 +276,7 @@ func (c *Collection) DeleteAll(txn kvrpc.ProviderTxn) (n int, err error) {
 }
 
 // GetMany for get many documents by document id list
-func (c *Collection) GetMany(dids []int64, txn kvrpc.ProviderTxn) (datas []bson.M, err error) {
+func (c *Collection) GetMany(dids []int64, txn mondis.ProviderTxn) (datas []bson.M, err error) {
 	// prologue start
 	err = c.db.checkState()
 	if err != nil {

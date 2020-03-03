@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/provider"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/util/closer"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
@@ -21,13 +21,13 @@ type DB struct {
 	once               sync.Once
 	state              uint32
 	closer             *closer.Strict
-	kvdb               kvrpc.KVDB
+	kvdb               mondis.KVDB
 	collectionSequence *Sequence
 	collections        map[string]*Collection
 }
 
 // NewDB is ctor for DB
-func NewDB(kvdb kvrpc.KVDB) *DB {
+func NewDB(kvdb mondis.KVDB) *DB {
 	collectionSequence, _ := NewSequence(kvdb, []byte(reservedKeywordCollection), collectionIDBandWidth)
 	return &DB{
 		kvdb:               kvdb,

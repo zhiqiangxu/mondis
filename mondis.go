@@ -1,8 +1,8 @@
-package kvrpc
+package mondis
 
 type (
 
-	// Client is the universal interface implemneted by kvrpc client
+	// Client is the universal interface implemneted by mondis client
 	Client interface {
 		KVOP
 		Update(func(t Txn) error) error

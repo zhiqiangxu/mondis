@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/zhiqiangxu/kvrpc"
+	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/qrpc"
 )
 
@@ -9,11 +9,11 @@ type (
 	// Option for Server
 	Option struct {
 	}
-	// Server for kvrpc
+	// Server for mondis
 	Server struct {
 		option   Option
-		kvoption kvrpc.KVOption
-		kvdb     kvrpc.KVDB
+		kvoption mondis.KVOption
+		kvdb     mondis.KVDB
 		qserver  *qrpc.Server
 	}
 	// KVServer is implemneted by Server
@@ -24,7 +24,7 @@ type (
 )
 
 // New is ctor for Server
-func New(addr string, kvdb kvrpc.KVDB, option Option, kvoption kvrpc.KVOption) KVServer {
+func New(addr string, kvdb mondis.KVDB, option Option, kvoption mondis.KVOption) KVServer {
 	s := &Server{option: option, kvoption: kvoption, kvdb: kvdb}
 
 	mux := qrpc.NewServeMux()

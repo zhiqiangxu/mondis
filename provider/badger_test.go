@@ -3,12 +3,12 @@ package provider
 import (
 	"testing"
 
-	"github.com/zhiqiangxu/kvrpc"
+	"github.com/zhiqiangxu/mondis"
 )
 
 func TestBadger(t *testing.T) {
 	b := NewBadger()
-	err := b.Open(kvrpc.KVOption{Dir: "/tmp/kvrpc"})
+	err := b.Open(mondis.KVOption{Dir: "/tmp/mondis"})
 	if err != nil {
 		t.Fatal("b.Open")
 	}

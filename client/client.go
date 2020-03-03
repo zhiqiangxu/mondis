@@ -1,10 +1,10 @@
 package client
 
 import (
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/pb"
-	"github.com/zhiqiangxu/kvrpc/provider"
-	"github.com/zhiqiangxu/kvrpc/server"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/pb"
+	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/server"
 	"github.com/zhiqiangxu/qrpc"
 )
 
@@ -13,20 +13,20 @@ type (
 	Option struct {
 		QrpcConfig qrpc.ConnectionConfig
 	}
-	// Client implements kvrpc.Client
+	// Client implements mondis.Client
 	Client struct {
 		con *qrpc.Connection
 	}
 )
 
 // New is ctor for Client
-func New(addr string, option Option) (c kvrpc.Client) {
+func New(addr string, option Option) (c mondis.Client) {
 	con := qrpc.NewConnectionWithReconnect([]string{addr}, option.QrpcConfig, nil)
 	c = &Client{con: con}
 	return
 }
 
-func setReq2PB(k, v []byte, meta *kvrpc.VMetaReq) pb.SetRequest {
+func setReq2PB(k, v []byte, meta *mondis.VMetaReq) pb.SetRequest {
 	req := pb.SetRequest{Key: k, Value: v}
 	if meta != nil {
 		req.Meta = &pb.VMetaReq{TTL: int64(meta.TTL), Tag: uint32(meta.Tag)}
@@ -65,8 +65,8 @@ func parseSetRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Set for implement kvrpc.Client
-func (c *Client) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
+// Set for implement mondis.Client
+func (c *Client) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 
 	req := setReq2PB(k, v, meta)
 	bytes, _ := req.Marshal()
@@ -110,7 +110,7 @@ func parseExistsRespFromFrame(respFrame *qrpc.Frame) (exists bool, err error) {
 	return
 }
 
-// Exists for implement kvrpc.Client
+// Exists for implement mondis.Client
 func (c *Client) Exists(k []byte) (exists bool, err error) {
 	req := pb.ExistsRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -125,7 +125,7 @@ func (c *Client) Exists(k []byte) (exists bool, err error) {
 	return
 }
 
-func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error) {
+func parseGetResp(resp qrpc.Response) (v []byte, meta mondis.VMetaResp, err error) {
 	frame, err := resp.GetFrame()
 	if err != nil {
 		return
@@ -135,7 +135,7 @@ func parseGetResp(resp qrpc.Response) (v []byte, meta kvrpc.VMetaResp, err error
 	return
 }
 
-func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta kvrpc.VMetaResp, err error) {
+func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta mondis.VMetaResp, err error) {
 	var getResp pb.GetResponse
 	err = getResp.Unmarshal(respFrame.Payload)
 	if err != nil {
@@ -160,8 +160,8 @@ func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta kvrpc.VMetaRes
 	return
 }
 
-// Get for implement kvrpc.Client
-func (c *Client) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
+// Get for implement mondis.Client
+func (c *Client) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
 
@@ -200,7 +200,7 @@ func parseDeleteRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Delete for implement kvrpc.Client
+// Delete for implement mondis.Client
 func (c *Client) Delete(k []byte) (err error) {
 	req := pb.DeleteRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -215,8 +215,8 @@ func (c *Client) Delete(k []byte) (err error) {
 	return
 }
 
-// Update for implement kvrpc.Client
-func (c *Client) Update(fn func(t kvrpc.Txn) error) (err error) {
+// Update for implement mondis.Client
+func (c *Client) Update(fn func(t mondis.Txn) error) (err error) {
 	txn := newTxn(c, true)
 	defer txn.Discard()
 
@@ -229,8 +229,8 @@ func (c *Client) Update(fn func(t kvrpc.Txn) error) (err error) {
 	return
 }
 
-// View for implement kvrpc.Client
-func (c *Client) View(fn func(t kvrpc.Txn) error) (err error) {
+// View for implement mondis.Client
+func (c *Client) View(fn func(t mondis.Txn) error) (err error) {
 	txn := newTxn(c, false)
 	defer txn.Discard()
 
@@ -239,7 +239,7 @@ func (c *Client) View(fn func(t kvrpc.Txn) error) (err error) {
 	return
 }
 
-func parseScanRespFromFrame(respFrame *qrpc.Frame) (entries []kvrpc.Entry, err error) {
+func parseScanRespFromFrame(respFrame *qrpc.Frame) (entries []mondis.Entry, err error) {
 	var scanResp pb.ScanResponse
 	err = scanResp.Unmarshal(respFrame.Payload)
 	if err != nil {
@@ -251,10 +251,10 @@ func parseScanRespFromFrame(respFrame *qrpc.Frame) (entries []kvrpc.Entry, err e
 		return
 	}
 
-	entries = make([]kvrpc.Entry, len(scanResp.Entries))
+	entries = make([]mondis.Entry, len(scanResp.Entries))
 	for i, entry := range scanResp.Entries {
-		meta := kvrpc.VMetaResp{ExpiresAt: entry.Meta.ExpiresAt, Tag: byte(entry.Meta.Tag)}
-		entries[i] = kvrpc.Entry{Key: entry.Key, Value: entry.Value, Meta: meta}
+		meta := mondis.VMetaResp{ExpiresAt: entry.Meta.ExpiresAt, Tag: byte(entry.Meta.Tag)}
+		entries[i] = mondis.Entry{Key: entry.Key, Value: entry.Value, Meta: meta}
 		entry.Key = nil
 		entry.Value = nil
 	}
@@ -262,7 +262,7 @@ func parseScanRespFromFrame(respFrame *qrpc.Frame) (entries []kvrpc.Entry, err e
 	return
 }
 
-func parseScanResp(resp qrpc.Response) (entries []kvrpc.Entry, err error) {
+func parseScanResp(resp qrpc.Response) (entries []mondis.Entry, err error) {
 	frame, err := resp.GetFrame()
 	if err != nil {
 		return
@@ -272,21 +272,21 @@ func parseScanResp(resp qrpc.Response) (entries []kvrpc.Entry, err error) {
 	return
 }
 
-func scanOption2Bytes(option kvrpc.ScanOption) (bytes []byte) {
+func scanOption2Bytes(option mondis.ScanOption) (bytes []byte) {
 	pso := &pb.ProviderScanOption{Reverse: option.Reverse, Prefix: option.Prefix, Offset: option.Offset}
 	req := pb.ScanRequest{ProviderScanOption: pso, Limit: int32(option.Limit)}
 	bytes, _ = req.Marshal()
 	return
 }
 
-// Scan for implement kvrpc.Client
-func (c *Client) Scan(option kvrpc.ScanOption) (entries []kvrpc.Entry, err error) {
+// Scan for implement mondis.Client
+func (c *Client) Scan(option mondis.ScanOption) (entries []mondis.Entry, err error) {
 	if option.Limit <= 0 {
 		return
 	}
 
-	if option.Limit > kvrpc.MaxEntry {
-		option.Limit = kvrpc.MaxEntry
+	if option.Limit > mondis.MaxEntry {
+		option.Limit = mondis.MaxEntry
 	}
 
 	bytes := scanOption2Bytes(option)

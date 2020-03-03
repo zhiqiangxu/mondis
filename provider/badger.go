@@ -2,21 +2,21 @@ package provider
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/zhiqiangxu/kvrpc"
+	"github.com/zhiqiangxu/mondis"
 )
 
-// Badger is kvrpc provider for badger
+// Badger is mondis provider for badger
 type Badger struct {
 	db *badger.DB
 }
 
 // NewBadger is ctor for Badger provider
-func NewBadger() kvrpc.KVDB {
+func NewBadger() mondis.KVDB {
 	return &Badger{}
 }
 
 // Open db
-func (b *Badger) Open(option kvrpc.KVOption) (err error) {
+func (b *Badger) Open(option mondis.KVOption) (err error) {
 	db, err := badger.Open(badger.DefaultOptions(option.Dir))
 	if err != nil {
 		return
@@ -36,12 +36,12 @@ func (b *Badger) Close() (err error) {
 }
 
 // NewTransaction creates a transaction object
-func (b *Badger) NewTransaction(update bool) kvrpc.ProviderTxn {
+func (b *Badger) NewTransaction(update bool) mondis.ProviderTxn {
 	return (*Txn)(b.db.NewTransaction(update))
 }
 
 // Set kv
-func (b *Badger) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
+func (b *Badger) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 	txn := (*Txn)(b.db.NewTransaction(true))
 	defer txn.Discard()
 
@@ -64,7 +64,7 @@ func (b *Badger) Exists(k []byte) (exists bool, err error) {
 }
 
 // Get v by k
-func (b *Badger) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
+func (b *Badger) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 	txn := (*Txn)(b.db.NewTransaction(false))
 	defer txn.Discard()
 
@@ -86,7 +86,7 @@ func (b *Badger) Delete(key []byte) (err error) {
 }
 
 // Scan over keys specified by option
-func (b *Badger) Scan(option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
+func (b *Badger) Scan(option mondis.ProviderScanOption, fn func(key []byte, value []byte, meta mondis.VMetaResp) bool) (err error) {
 	txn := (*Txn)(b.db.NewTransaction(false))
 	defer txn.Discard()
 
@@ -95,7 +95,7 @@ func (b *Badger) Scan(option kvrpc.ProviderScanOption, fn func(key []byte, value
 	return
 }
 
-func scanByBadgerTxn(txn *badger.Txn, option kvrpc.ProviderScanOption, fn func(key []byte, value []byte, meta kvrpc.VMetaResp) bool) (err error) {
+func scanByBadgerTxn(txn *badger.Txn, option mondis.ProviderScanOption, fn func(key []byte, value []byte, meta mondis.VMetaResp) bool) (err error) {
 	iterOpts := badger.DefaultIteratorOptions
 	iterOpts.Reverse = option.Reverse
 
@@ -117,7 +117,7 @@ func scanByBadgerTxn(txn *badger.Txn, option kvrpc.ProviderScanOption, fn func(k
 		item := iter.Item()
 
 		err = item.Value(func(val []byte) error {
-			goon = fn(item.Key(), val, kvrpc.VMetaResp{ExpiresAt: item.ExpiresAt(), Tag: item.UserMeta()})
+			goon = fn(item.Key(), val, mondis.VMetaResp{ExpiresAt: item.ExpiresAt(), Tag: item.UserMeta()})
 			return nil
 		})
 		if err != nil || !goon {

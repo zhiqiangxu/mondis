@@ -6,17 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/client"
-	"github.com/zhiqiangxu/kvrpc/document"
-	"github.com/zhiqiangxu/kvrpc/provider"
-	"github.com/zhiqiangxu/kvrpc/server"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/client"
+	"github.com/zhiqiangxu/mondis/document"
+	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/server"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 const (
 	addr    = "localhost:8099"
-	dataDir = "/tmp/kvrpc"
+	dataDir = "/tmp/mondis"
 )
 
 func TestBadger(t *testing.T) {
@@ -24,7 +24,7 @@ func TestBadger(t *testing.T) {
 	{
 		// use badger provider
 		kvdb := provider.NewBadger()
-		s := server.New(addr, kvdb, server.Option{}, kvrpc.KVOption{Dir: dataDir})
+		s := server.New(addr, kvdb, server.Option{}, mondis.KVOption{Dir: dataDir})
 		go s.Start()
 
 		time.Sleep(time.Millisecond * 500)
@@ -74,7 +74,7 @@ func TestBadger(t *testing.T) {
 			// test Update transaction
 			key2 := []byte("key2")
 			value2 := []byte("value2")
-			err := c.Update(func(txn kvrpc.Txn) error {
+			err := c.Update(func(txn mondis.Txn) error {
 				err := txn.Set(key2, value2, nil)
 				if err != nil {
 					t.Fatal("Update.Set key2")
@@ -115,7 +115,7 @@ func TestBadger(t *testing.T) {
 			if err != nil {
 				t.Fatal("Set key3", err)
 			}
-			err = c.View(func(txn kvrpc.Txn) error {
+			err = c.View(func(txn mondis.Txn) error {
 				v, _, err := txn.Get(key3)
 				if err != nil || !bytes.Equal(v, value3) {
 					t.Fatal("View Get key3", err)
@@ -149,21 +149,21 @@ func TestBadger(t *testing.T) {
 			}
 
 			var (
-				entries []kvrpc.Entry
+				entries []mondis.Entry
 				err     error
 			)
-			scanOption := kvrpc.ScanOption{Limit: n - 1, ProviderScanOption: kvrpc.ProviderScanOption{Prefix: []byte(prefix)}}
+			scanOption := mondis.ScanOption{Limit: n - 1, ProviderScanOption: mondis.ProviderScanOption{Prefix: []byte(prefix)}}
 			for j := 0; j < 2; j++ {
 				switch j {
 				case 0:
 					entries, err = c.Scan(scanOption)
 				case 1:
-					err = c.Update(func(txn kvrpc.Txn) error {
+					err = c.Update(func(txn mondis.Txn) error {
 						entries, err = txn.Scan(scanOption)
 						return err
 					})
 				case 2:
-					err = c.View(func(txn kvrpc.Txn) error {
+					err = c.View(func(txn mondis.Txn) error {
 						entries, err = txn.Scan(scanOption)
 						return err
 					})
@@ -192,7 +192,7 @@ func TestBadger(t *testing.T) {
 
 func TestDocument(t *testing.T) {
 	kvdb := provider.NewBadger()
-	err := kvdb.Open(kvrpc.KVOption{Dir: dataDir})
+	err := kvdb.Open(mondis.KVOption{Dir: dataDir})
 	if err != nil {
 		t.Fatal("kvdb.Open", err)
 	}

@@ -1,6 +1,6 @@
-# kvrpc ≈ redis + mongodb
+# mondis ≈ mongodb + redis
 
-`kvrpc` aimed to be a universal rpc layer for any key value database, but as it evolves, `kvrpc` now also aims to bridge the gap between a document-oriented database and a key value database!
+`mondis` started as `kvrpc` to be a universal rpc layer for any key value database, but as it evolves, `mondis` now also aims to bridge the gap between a document-oriented database and a key value database!
 
 ## Features:
 
@@ -14,9 +14,9 @@
     7. `View`   (readonly transaction)
 2. document-oriented database api like mongodb (in progress)
 
-Refer to [`kvrpc.Client`](https://github.com/zhiqiangxu/kvrpc/blob/master/kvrpc.go#L6) or [`test cases`](https://github.com/zhiqiangxu/kvrpc/blob/master/test/sit_test.go) for details.
+Refer to [`mondis.Client`](https://github.com/zhiqiangxu/mondis/blob/master/mondis.go#L6) or [`test cases`](https://github.com/zhiqiangxu/mondis/blob/master/test/sit_test.go) for details.
 
-`kvrpc` is based on [`qrpc`](https://github.com/zhiqiangxu/qrpc).
+`mondis` is based on [`qrpc`](https://github.com/zhiqiangxu/qrpc).
 
 ## Demo
 
@@ -26,20 +26,20 @@ This is how to start a server for badger provider:
 package main
 
 import (
-    "github.com/zhiqiangxu/kvrpc/provider"
-    "github.com/zhiqiangxu/kvrpc/server"
+    "github.com/zhiqiangxu/mondis/provider"
+    "github.com/zhiqiangxu/mondis/server"
 )
 
 const (
 	addr    = "localhost:8099"
-	dataDir = "/tmp/kvrpc"
+	dataDir = "/tmp/mondis"
 )
 
 func main() {
     // use badger provider
     kvdb := provider.NewBadger()
-    // create a kvrpc server
-    s := server.New(addr, kvdb, server.Option{}, kvrpc.KVOption{Dir: dataDir})
+    // create a mondis server
+    s := server.New(addr, kvdb, server.Option{}, mondis.KVOption{Dir: dataDir})
     // start the server
     s.Start()
 }
@@ -52,12 +52,12 @@ This is how to start the client:
 package main
 
 import (
-    "github.com/zhiqiangxu/kvrpc/client"
+    "github.com/zhiqiangxu/mondis/client"
     "bytes"
 )
 
 func main() {
-    // create a kvrpc client
+    // create a mondis client
     c := client.New(addr, client.Option{})
 
     // test Set
@@ -89,7 +89,7 @@ func main() {
     // test Update transaction
     key2 := []byte("key2")
     value2 := []byte("value2")
-    err = c.Update(func(txn kvrpc.Txn) error {
+    err = c.Update(func(txn mondis.Txn) error {
         err := txn.Set(key2, value2, nil)
         if err != nil {
             panic("Update.Set key2")
@@ -117,7 +117,7 @@ func main() {
     if err != nil {
         panic("Set key3")
     }
-    err = c.View(func(txn kvrpc.Txn) error {
+    err = c.View(func(txn mondis.Txn) error {
         v, _, err := txn.Get(key3)
         if err != nil || !bytes.Equal(v, value3) {
             panic("View Get key3")

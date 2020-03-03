@@ -4,14 +4,14 @@ import (
 	"encoding/binary"
 	"sync"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/provider"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/provider"
 )
 
 // Sequence for allocating auto incrementing pk
 type Sequence struct {
 	sync.Mutex
-	kvdb      kvrpc.KVDB
+	kvdb      mondis.KVDB
 	key       []byte
 	bandwidth uint64
 	next      uint64
@@ -19,7 +19,7 @@ type Sequence struct {
 }
 
 // NewSequence is ctor for Sequence
-func NewSequence(kvdb kvrpc.KVDB, keyword []byte, bandwidth uint64) (s *Sequence, err error) {
+func NewSequence(kvdb mondis.KVDB, keyword []byte, bandwidth uint64) (s *Sequence, err error) {
 	if len(keyword) == 0 {
 		err = ErrEmptyKeywordForSequence
 		return

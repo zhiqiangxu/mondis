@@ -3,9 +3,9 @@ package client
 import (
 	"errors"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/pb"
-	"github.com/zhiqiangxu/kvrpc/server"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/pb"
+	"github.com/zhiqiangxu/mondis/server"
 	"github.com/zhiqiangxu/qrpc"
 )
 
@@ -18,14 +18,14 @@ type Txn struct {
 	firstFrame *qrpc.Frame
 }
 
-var _ kvrpc.Txn = (*Txn)(nil)
+var _ mondis.Txn = (*Txn)(nil)
 
 func newTxn(c *Client, update bool) *Txn {
 	return &Txn{c: c, update: update}
 }
 
-// Set for implement kvrpc.Txn
-func (txn *Txn) Set(k, v []byte, meta *kvrpc.VMetaReq) (err error) {
+// Set for implement mondis.Txn
+func (txn *Txn) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
 		return
@@ -94,7 +94,7 @@ func (txn *Txn) request(cmd qrpc.Cmd, bytes []byte, end bool) (noop bool, err er
 	return
 }
 
-// Exists for implement kvrpc.Client
+// Exists for implement mondis.Client
 func (txn *Txn) Exists(k []byte) (exists bool, err error) {
 	req := pb.ExistsRequest{Key: k}
 	bytes, _ := req.Marshal()
@@ -113,8 +113,8 @@ func (txn *Txn) Exists(k []byte) (exists bool, err error) {
 	return
 }
 
-// Get for implement kvrpc.Txn
-func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
+// Get for implement mondis.Txn
+func (txn *Txn) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 	req := pb.GetRequest{Key: k}
 	bytes, _ := req.Marshal()
 
@@ -136,7 +136,7 @@ func (txn *Txn) Get(k []byte) (v []byte, meta kvrpc.VMetaResp, err error) {
 // ErrMutateForROTxn when trying to delete/set on readonly txn
 var ErrMutateForROTxn = errors.New("mutate for readonly txn")
 
-// Delete for implement kvrpc.Txn
+// Delete for implement mondis.Txn
 func (txn *Txn) Delete(k []byte) (err error) {
 	if !txn.update {
 		err = ErrMutateForROTxn
@@ -177,7 +177,7 @@ func parseCommitResp(respFrame *qrpc.Frame) (err error) {
 	return
 }
 
-// Commit for implement kvrpc.Txn
+// Commit for implement mondis.Txn
 func (txn *Txn) Commit() (err error) {
 	noop, err := txn.request(server.CommitCmd, nil, true)
 	if err != nil {
@@ -198,7 +198,7 @@ func (txn *Txn) Commit() (err error) {
 	return
 }
 
-// Discard for implement kvrpc.Txn
+// Discard for implement mondis.Txn
 func (txn *Txn) Discard() {
 	noop, err := txn.request(server.DiscardCmd, nil, true)
 	if err != nil {
@@ -214,14 +214,14 @@ func (txn *Txn) Discard() {
 	return
 }
 
-// Scan for implement kvrpc.Txn
-func (txn *Txn) Scan(option kvrpc.ScanOption) (entries []kvrpc.Entry, err error) {
+// Scan for implement mondis.Txn
+func (txn *Txn) Scan(option mondis.ScanOption) (entries []mondis.Entry, err error) {
 	if option.Limit <= 0 {
 		return
 	}
 
-	if option.Limit > kvrpc.MaxEntry {
-		option.Limit = kvrpc.MaxEntry
+	if option.Limit > mondis.MaxEntry {
+		option.Limit = mondis.MaxEntry
 	}
 
 	bytes := scanOption2Bytes(option)

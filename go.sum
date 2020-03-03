@@ -156,6 +156,8 @@ github.com/xdg/stringprep v0.0.0-20180714160509-73f8eece6fdc/go.mod h1:Jhud4/sHM
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 github.com/zhiqiangxu/go-reuseport v0.2.1 h1:GTAKmEwCmINZeeSGsVB4QECChJT1cpdFKzP+hoPHSgI=
 github.com/zhiqiangxu/go-reuseport v0.2.1/go.mod h1:4n3ZU4fo7U4z7wx3QaR+jLSph3Smd2EHkGEjz7G+mso=
+github.com/zhiqiangxu/kvrpc v0.0.0-20200226073027-71e2bbd7fcec h1:KC5ykyY7bZMy0derj4gJM+Q/GFxldC5RFcolPjKIngw=
+github.com/zhiqiangxu/kvrpc v0.0.0-20200226073027-71e2bbd7fcec/go.mod h1:VihQ1ssIH61sEnNxoSX4xlLsQh1VdC13Tfjyyb+kK6s=
 github.com/zhiqiangxu/qrpc v0.0.0-20191121085610-3b68b3e2b8bd/go.mod h1:nOWIVAnyE3McYtKiBM3pZ89yvtL6NQlMeVQjR0fABeM=
 github.com/zhiqiangxu/qrpc v0.0.0-20200223133549-52225f740b92 h1:OlMHhxUDdMtvnWKKOPEspkdvwX2B14RZI2uA+rhcajo=
 github.com/zhiqiangxu/qrpc v0.0.0-20200223133549-52225f740b92/go.mod h1:UdWqGTzPgnsG7DzfHxnts3bjZ5bnDuG5ZIkaTKT82NQ=

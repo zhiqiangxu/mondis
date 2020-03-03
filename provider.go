@@ -1,10 +1,10 @@
-package kvrpc
+package mondis
 
 import "time"
 
 type (
 
-	// KVDB is the single interface that a key value database needs to implement to integrate into kvrpc
+	// KVDB is the single interface that a key value database needs to implement to integrate into mondis
 	KVDB interface {
 		ProviderKVOP
 		Open(option KVOption) error

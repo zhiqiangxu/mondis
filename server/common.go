@@ -3,9 +3,9 @@ package server
 import (
 	"time"
 
-	"github.com/zhiqiangxu/kvrpc"
-	"github.com/zhiqiangxu/kvrpc/pb"
-	"github.com/zhiqiangxu/kvrpc/provider"
+	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/pb"
+	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/qrpc"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 func handleTxnContinuedFrame(
 	writer qrpc.FrameWriter,
 	frame *qrpc.RequestFrame,
-	txn kvrpc.ProviderTxn) {
+	txn mondis.ProviderTxn) {
 	var (
 		getReq     pb.GetRequest
 		getResp    pb.GetResponse
@@ -177,7 +177,7 @@ func handleTxnContinuedFrame(
 	}
 }
 
-func handleTxnSet(txn kvrpc.ProviderTxn, req *pb.SetRequest, resp *pb.SetResponse) {
+func handleTxnSet(txn mondis.ProviderTxn, req *pb.SetRequest, resp *pb.SetResponse) {
 	meta := metaFromSetRequest(req)
 	err := txn.Set(req.Key, req.Value, meta)
 	if err != nil {
@@ -197,7 +197,7 @@ func handleTxnSet(txn kvrpc.ProviderTxn, req *pb.SetRequest, resp *pb.SetRespons
 	resp.Msg = ""
 }
 
-func handleSet(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
+func handleSet(kvdb mondis.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
 	meta := metaFromSetRequest(req)
 	err := kvdb.Set(req.Key, req.Value, meta)
 	if err != nil {
@@ -212,7 +212,7 @@ func handleSet(kvdb kvrpc.KVDB, req *pb.SetRequest, resp *pb.SetResponse) {
 	resp.Msg = ""
 }
 
-func handleExists(kvop kvrpc.ProviderKVOP, req *pb.ExistsRequest, resp *pb.ExistsResponse) {
+func handleExists(kvop mondis.ProviderKVOP, req *pb.ExistsRequest, resp *pb.ExistsResponse) {
 	exists, err := kvop.Exists(req.Key)
 	if err != nil {
 
@@ -227,7 +227,7 @@ func handleExists(kvop kvrpc.ProviderKVOP, req *pb.ExistsRequest, resp *pb.Exist
 	resp.Exists = exists
 }
 
-func handleGet(kvop kvrpc.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse) {
+func handleGet(kvop mondis.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse) {
 	value, meta, err := kvop.Get(req.Key)
 	if err != nil {
 		if err == provider.ErrKeyNotFound {
@@ -247,7 +247,7 @@ func handleGet(kvop kvrpc.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse
 	resp.Meta = &pb.VMetaResp{ExpiresAt: meta.ExpiresAt, Tag: uint32(meta.Tag)}
 }
 
-func handleDelete(kvdb kvrpc.KVDB, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
+func handleDelete(kvdb mondis.KVDB, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
 	err := kvdb.Delete(req.Key)
 	if err != nil {
 		resp.Code = CodeInternalError
@@ -259,7 +259,7 @@ func handleDelete(kvdb kvrpc.KVDB, req *pb.DeleteRequest, resp *pb.DeleteRespons
 	resp.Msg = ""
 }
 
-func handleTxnDelete(txn kvrpc.ProviderTxn, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
+func handleTxnDelete(txn mondis.ProviderTxn, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
 	err := txn.Delete(req.Key)
 	if err != nil {
 		if err == provider.ErrTxnTooBig {
@@ -282,19 +282,19 @@ func copyBytes(in []byte) (out []byte) {
 	return
 }
 
-func handleScan(kvop kvrpc.ProviderKVOP, req *pb.ScanRequest, resp *pb.ScanResponse) {
+func handleScan(kvop mondis.ProviderKVOP, req *pb.ScanRequest, resp *pb.ScanResponse) {
 	pso := req.ProviderScanOption
-	option := kvrpc.ProviderScanOption{Reverse: pso.Reverse, Prefix: pso.Prefix, Offset: pso.Offset}
+	option := mondis.ProviderScanOption{Reverse: pso.Reverse, Prefix: pso.Prefix, Offset: pso.Offset}
 	limit := int(req.Limit)
 	if limit == 0 {
 		goto DONE
 	}
-	if limit > kvrpc.MaxEntry {
-		limit = kvrpc.MaxEntry
+	if limit > mondis.MaxEntry {
+		limit = mondis.MaxEntry
 	}
 
 	{
-		err := kvop.Scan(option, func(key, value []byte, meta kvrpc.VMetaResp) bool {
+		err := kvop.Scan(option, func(key, value []byte, meta mondis.VMetaResp) bool {
 			keyCopy := copyBytes(key)
 			valueCopy := copyBytes(value)
 			pbMeta := &pb.VMetaResp{ExpiresAt: meta.ExpiresAt, Tag: uint32(meta.Tag)}
@@ -318,7 +318,7 @@ DONE:
 	resp.Msg = ""
 }
 
-func handleTxnCommit(txn kvrpc.ProviderTxn, resp *pb.CommitResponse) {
+func handleTxnCommit(txn mondis.ProviderTxn, resp *pb.CommitResponse) {
 	err := txn.Commit()
 	if err != nil {
 		resp.Code = CodeInternalError
@@ -330,12 +330,12 @@ func handleTxnCommit(txn kvrpc.ProviderTxn, resp *pb.CommitResponse) {
 	resp.Msg = ""
 }
 
-func metaFromSetRequest(req *pb.SetRequest) *kvrpc.VMetaReq {
+func metaFromSetRequest(req *pb.SetRequest) *mondis.VMetaReq {
 	if req.Meta == nil {
 		return nil
 	}
 
-	return &kvrpc.VMetaReq{TTL: time.Duration(req.Meta.TTL), Tag: byte(req.Meta.Tag)}
+	return &mondis.VMetaReq{TTL: time.Duration(req.Meta.TTL), Tag: byte(req.Meta.Tag)}
 }
 
 func writeStreamRespBytes(writer qrpc.FrameWriter, frame *qrpc.RequestFrame, respCmd qrpc.Cmd, bytes []byte, end bool) (err error) {

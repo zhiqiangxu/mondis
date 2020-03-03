@@ -1,10 +1,11 @@
-module github.com/zhiqiangxu/kvrpc
+module github.com/zhiqiangxu/mondis
 
 go 1.12
 
 require (
 	github.com/dgraph-io/badger v1.6.0
 	github.com/gogo/protobuf v1.3.1
+	github.com/zhiqiangxu/kvrpc v0.0.0-20200226073027-71e2bbd7fcec // indirect
 	github.com/zhiqiangxu/qrpc v0.0.0-20200225135606-e2574f37b838
 	github.com/zhiqiangxu/util v0.0.0-20200302071207-374e3ebf3459
 	go.mongodb.org/mongo-driver v1.3.0
