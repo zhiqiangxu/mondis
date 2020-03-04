@@ -23,15 +23,18 @@ type DB struct {
 	closer             *closer.Strict
 	kvdb               mondis.KVDB
 	collectionSequence *Sequence
+	indexSequence      *Sequence
 	collections        map[string]*Collection
 }
 
 // NewDB is ctor for DB
 func NewDB(kvdb mondis.KVDB) *DB {
-	collectionSequence, _ := NewSequence(kvdb, []byte(reservedKeywordCollection), collectionIDBandWidth)
+	collectionSequence, _ := NewSequence(kvdb, reservedKeywordCollectionBytes, collectionIDBandWidth)
+	indexSequence, _ := NewSequence(kvdb, reservedKeywordIndexBytes, indexIDBandWidth)
 	return &DB{
 		kvdb:               kvdb,
 		collectionSequence: collectionSequence,
+		indexSequence:      indexSequence,
 		collections:        make(map[string]*Collection),
 		closer:             closer.NewStrict(),
 	}
@@ -48,17 +51,13 @@ var (
 	ErrCollectionNameForbiden = errors.New("collection name is a reserved keyword")
 )
 
-var (
-	reservedKeywordCollectionBytes = []byte(reservedKeywordCollection)
-)
-
 // Collection returns collection operator
 func (db *DB) Collection(name string) (collection *Collection, err error) {
 	if name == "" {
 		err = ErrEmptyCollectionName
 		return
 	}
-	if name == reservedKeywordCollection {
+	if name == reservedKeywordCollection || name == reservedKeywordIndex {
 		err = ErrCollectionNameForbiden
 		return
 	}
@@ -88,12 +87,11 @@ func (db *DB) Collection(name string) (collection *Collection, err error) {
 		db.mu.Unlock()
 		return
 	}
-	cid, err := db.getCollectionID(name)
+	collection, err = newCollection(db, name)
 	if err != nil {
 		db.mu.Unlock()
 		return
 	}
-	collection = newCollection(db, cid, name)
 	db.collections[name] = collection
 	db.mu.Unlock()
 
@@ -139,6 +137,11 @@ func (db *DB) Close() {
 			logger.Instance().Error("collectionSequence.ReleaseRemaining", zap.Error(err))
 		}
 
+		err = db.indexSequence.ReleaseRemaining()
+		if err != nil {
+			logger.Instance().Error("indexSequence.ReleaseRemaining", zap.Error(err))
+		}
+
 		for _, collection := range db.collections {
 			collection.close()
 		}
@@ -148,14 +151,24 @@ func (db *DB) Close() {
 
 }
 
+func (db *DB) nextIndexID() (iid int64, err error) {
+	uiid, err := db.indexSequence.Next()
+	if err != nil {
+		return
+	}
+
+	iid = int64(uiid)
+	return
+}
+
 func (db *DB) getCollectionID(name string) (cid int64, err error) {
 
-	cidKey := AppendCIDKey(nil, name)
+	cn2idKey := EncodeMetaCollectionName2IDKey(nil, name)
 
 	txn := db.kvdb.NewTransaction(true)
 	defer txn.Discard()
 
-	v, _, err := txn.Get(cidKey)
+	v, _, err := txn.Get(cn2idKey)
 	if err != nil {
 		if err == provider.ErrKeyNotFound {
 			var ucid uint64
@@ -166,7 +179,7 @@ func (db *DB) getCollectionID(name string) (cid int64, err error) {
 
 			var data [8]byte
 			binary.BigEndian.PutUint64(data[:], ucid)
-			err = txn.Set(cidKey, data[:], nil)
+			err = txn.Set(cn2idKey, data[:], nil)
 			if err != nil {
 				return
 			}

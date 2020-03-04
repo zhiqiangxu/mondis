@@ -250,6 +250,41 @@ func TestDocument(t *testing.T) {
 	if err != document.ErrDocNotFound {
 		t.Fatal("err != document.ErrDocNotFound", err)
 	}
+
+	{
+		// test index
+		c, err := db.Collection("i")
+		if err != nil {
+			t.Fatal("db.Collection", err)
+		}
+		idxName := "test_idx"
+		idef := document.IndexDefinition{
+			Name: idxName,
+			Fields: []document.IndexField{
+				document.IndexField{Name: "f1"},
+			},
+		}
+		iid, err := c.CreateIndex(idef)
+		if err != nil {
+			t.Fatal("c.CreateIndex", err)
+		}
+		if iid <= 0 {
+			t.Fatal("iid <=0", iid)
+		}
+
+		allIndexes := c.GetIndexes()
+		if len(allIndexes) != 1 {
+			t.Fatal("len(allIndexes)!=1")
+		}
+
+		exists, err := c.DropIndex(idxName)
+		if err != nil {
+			t.Fatal("c.DropIndex", err)
+		}
+		if !exists {
+			t.Fatal()
+		}
+	}
 	db.Close()
 
 	err = c.DeleteOne(did, nil)

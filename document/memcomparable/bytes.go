@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"unsafe"
+
+	"github.com/zhiqiangxu/util"
 )
 
 const (
@@ -29,7 +31,7 @@ var (
 func EncodeBytes(b []byte, data []byte) []byte {
 	dLen := len(data)
 	reallocSize := (dLen/encGroupSize + 1) * (encGroupSize + 1)
-	result := reallocBytes(b, reallocSize)
+	result := util.ReallocBytes(b, reallocSize)
 	for idx := 0; idx <= dLen; idx += encGroupSize {
 		remain := dLen - idx
 		padCount := 0
@@ -46,6 +48,14 @@ func EncodeBytes(b []byte, data []byte) []byte {
 	}
 
 	return result
+}
+
+// EncodedBytesLength returns the length of data after encoded
+func EncodedBytesLength(data []byte) int {
+	dataLen := len(data)
+	mod := dataLen % encGroupSize
+	padCount := encGroupSize - mod
+	return dataLen + padCount + 1 + dataLen/encGroupSize
 }
 
 func decodeBytes(b []byte, buf []byte, reverse bool) (leftover []byte, data []byte, err error) {
@@ -155,17 +165,4 @@ func reverseBytes(b []byte) {
 	}
 
 	safeReverseBytes(b)
-}
-
-// reallocBytes is like realloc.
-func reallocBytes(b []byte, n int) []byte {
-	newSize := len(b) + n
-	if cap(b) < newSize {
-		bs := make([]byte, len(b), newSize)
-		copy(bs, b)
-		return bs
-	}
-
-	// slice b has capability to store n bytes
-	return b
 }

@@ -30,4 +30,14 @@ func TestBytes(t *testing.T) {
 	if bytes.Compare(EncodeBytesDesc(nil, abc), EncodeBytesDesc(nil, def)) <= 0 {
 		t.Fail()
 	}
+
+	if EncodedBytesLength([]byte{}) != 9 {
+		t.Fail()
+	}
+	if EncodedBytesLength([]byte{1, 2, 3}) != 9 {
+		t.Fail()
+	}
+	if EncodedBytesLength([]byte{1, 2, 3, 4, 5, 6, 7, 8}) != 9*2 {
+		t.Fail()
+	}
 }

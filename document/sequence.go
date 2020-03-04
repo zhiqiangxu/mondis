@@ -30,7 +30,7 @@ func NewSequence(kvdb mondis.KVDB, keyword []byte, bandwidth uint64) (s *Sequenc
 		return
 	}
 
-	s = &Sequence{kvdb: kvdb, key: AppendSequenceKey(nil, keyword), bandwidth: bandwidth}
+	s = &Sequence{kvdb: kvdb, key: EncodeMetaSequenceKey(nil, keyword), bandwidth: bandwidth}
 	err = s.updateLease()
 
 	return
