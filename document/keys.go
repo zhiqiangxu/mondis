@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/zhiqiangxu/mondis/document/compact"
-	"github.com/zhiqiangxu/mondis/document/memcomparable"
+	"github.com/zhiqiangxu/mondis/kv"
+	"github.com/zhiqiangxu/mondis/kv/compact"
+	"github.com/zhiqiangxu/mondis/kv/memcomparable"
 	"github.com/zhiqiangxu/util"
 )
-
-// Key for document database
-type Key []byte
 
 const (
 	basePrefix                = "_md_"
@@ -47,7 +45,7 @@ var (
 )
 
 // AppendCollectionDocumentPrefix appends c[cid]_d to buf
-func AppendCollectionDocumentPrefix(buf []byte, cid int64) Key {
+func AppendCollectionDocumentPrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(collectionPrefix)+8+len(documentPrefix))
 	}
@@ -58,7 +56,7 @@ func AppendCollectionDocumentPrefix(buf []byte, cid int64) Key {
 }
 
 // EncodeCollectionDocumentKey returns c[cid]_d[did]
-func EncodeCollectionDocumentKey(buf []byte, cid, did int64) Key {
+func EncodeCollectionDocumentKey(buf []byte, cid, did int64) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(collectionPrefix)+8+len(documentPrefix)+8)
 	}
@@ -69,7 +67,7 @@ func EncodeCollectionDocumentKey(buf []byte, cid, did int64) Key {
 }
 
 // AppendCollectionIndexDataPrefix appends c[cid]_id to buf
-func AppendCollectionIndexDataPrefix(buf []byte, cid int64) Key {
+func AppendCollectionIndexDataPrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexDataPrefix))
 	}
@@ -80,7 +78,7 @@ func AppendCollectionIndexDataPrefix(buf []byte, cid int64) Key {
 }
 
 // EncodeCollectionColumnsIndexedKey return c[cid]_ci[sorted fields]
-func EncodeCollectionColumnsIndexedKey(buf []byte, cid int64, fields []IndexField) Key {
+func EncodeCollectionColumnsIndexedKey(buf []byte, cid int64, fields []IndexField) kv.Key {
 
 	if buf == nil {
 		bufLen := len(collectionPrefix) + 8 + len(columnsIndexedPrefix)
@@ -116,7 +114,7 @@ func EncodeCollectionColumnsIndexedKey(buf []byte, cid int64, fields []IndexFiel
 }
 
 // EncodeMetaSequenceKey returns m_s[keyword]
-func EncodeMetaSequenceKey(buf, keyword []byte) Key {
+func EncodeMetaSequenceKey(buf, keyword []byte) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(metaSequencePrefix)+len(keyword))
 	}
@@ -126,7 +124,7 @@ func EncodeMetaSequenceKey(buf, keyword []byte) Key {
 }
 
 // EncodeMetaCollectionName2IDKey returns m_cn2id[cname] to buf
-func EncodeMetaCollectionName2IDKey(buf []byte, cname string) Key {
+func EncodeMetaCollectionName2IDKey(buf []byte, cname string) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(metaCName2IDPrefix)+memcomparable.EncodedBytesLength(util.Slice(cname)))
 	}
@@ -136,7 +134,7 @@ func EncodeMetaCollectionName2IDKey(buf []byte, cname string) Key {
 }
 
 // EncodeMetaIndexKey returns m_i[iid]
-func EncodeMetaIndexKey(buf []byte, iid int64) Key {
+func EncodeMetaIndexKey(buf []byte, iid int64) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(metaIndexPrefix)+8)
 	}
@@ -146,7 +144,7 @@ func EncodeMetaIndexKey(buf []byte, iid int64) Key {
 }
 
 // AppendCollectionIndexNamePrefix appends c_in[iname] to buf
-func AppendCollectionIndexNamePrefix(buf []byte, cid int64) Key {
+func AppendCollectionIndexNamePrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix))
 	}
@@ -157,7 +155,7 @@ func AppendCollectionIndexNamePrefix(buf []byte, cid int64) Key {
 }
 
 // EncodeCollectionIndexName2IDKey return c_in[iname]
-func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) Key {
+func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) kv.Key {
 	if buf == nil {
 		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix)+memcomparable.EncodedBytesLength(util.Slice(iname)))
 	}
@@ -168,16 +166,16 @@ func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) Key {
 	return buf
 }
 
-func hasCollectionPrefix(key Key) bool {
+func hasCollectionPrefix(key kv.Key) bool {
 	return bytes.HasPrefix(key, collectionPrefixBytes)
 }
 
-func hasIndexNamePrefix(key Key) bool {
+func hasIndexNamePrefix(key kv.Key) bool {
 	return bytes.HasPrefix(key, indexNamePrefixBytes)
 }
 
 // DecodeCollectionIndexName2IDKey is reverse for EncodeCollectionIndexName2IDKey
-func DecodeCollectionIndexName2IDKey(key Key) (cid int64, iname []byte, err error) {
+func DecodeCollectionIndexName2IDKey(key kv.Key) (cid int64, iname []byte, err error) {
 	if len(key) <= len(collectionPrefix)+8+len(indexNamePrefix) {
 		err = fmt.Errorf("invalid collection name to id key - %q", key)
 		return

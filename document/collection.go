@@ -6,8 +6,9 @@ import (
 	"sync"
 
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/document/compact"
+	"github.com/zhiqiangxu/mondis/kv/compact"
 	"github.com/zhiqiangxu/mondis/provider"
+	tutil "github.com/zhiqiangxu/mondis/util"
 	"github.com/zhiqiangxu/util"
 	"github.com/zhiqiangxu/util/logger"
 	"go.mongodb.org/mongo-driver/bson"
@@ -80,28 +81,17 @@ func (c *Collection) InsertOne(doc bson.M, txn mondis.ProviderTxn) (did int64, e
 		return
 	}
 
-	docKey := EncodeCollectionDocumentKey(nil, c.cid, int64(udid))
+	did = int64(udid)
+	docKey := EncodeCollectionDocumentKey(nil, c.cid, did)
 
-	{
-		var oneshot bool
-		if txn == nil {
-			oneshot = true
-			txn = c.kvdb.NewTransaction(true)
-			defer txn.Discard()
-		}
-		err = txn.Set(docKey, data, nil)
-		if err != nil {
-			return
-		}
+	insertFunc := func(txn mondis.ProviderTxn) error {
+		return txn.Set(docKey, data, nil)
+	}
 
-		if oneshot {
-			err = txn.Commit()
-			if err != nil {
-				return
-			}
-		}
-
-		did = int64(udid)
+	if txn == nil {
+		err = tutil.RunInNewUpdateTxn(c.kvdb, insertFunc)
+	} else {
+		err = insertFunc(txn)
 	}
 
 	return
@@ -142,15 +132,8 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.Pr
 
 	docKey := EncodeCollectionDocumentKey(nil, c.cid, did)
 
-	{
-		var oneshot, exists bool
-		if txn == nil {
-			oneshot = true
-			txn = c.kvdb.NewTransaction(true)
-			defer txn.Discard()
-		}
-
-		exists, err = txn.Exists(docKey)
+	updateFunc := func(txn mondis.ProviderTxn) (err error) {
+		exists, err := txn.Exists(docKey)
 		if err != nil {
 			return
 		}
@@ -164,19 +147,18 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.Pr
 			return
 		}
 
-		if oneshot {
-			err = txn.Commit()
-			if err != nil {
-				return
-			}
-		}
-
 		updated = true
 		isNew = !exists
-
 		return
 	}
 
+	if txn == nil {
+		err = tutil.RunInNewUpdateTxn(c.kvdb, updateFunc)
+	} else {
+		err = updateFunc(txn)
+	}
+
+	return
 }
 
 // UpsertOne for upsert an existing document in collection
@@ -202,27 +184,18 @@ func (c *Collection) DeleteOne(did int64, txn mondis.ProviderTxn) (err error) {
 
 	docKey := EncodeCollectionDocumentKey(nil, c.cid, did)
 
-	{
-		var oneshot bool
-		if txn == nil {
-			oneshot = true
-			txn = c.kvdb.NewTransaction(true)
-			defer txn.Discard()
-		}
+	deleteFunc := func(txn mondis.ProviderTxn) (err error) {
 		err = txn.Delete(docKey)
-		if err != nil {
-			return
-		}
-		if oneshot {
-			err = txn.Commit()
-			if err != nil {
-				return
-			}
-		}
-
 		return
 	}
 
+	if txn == nil {
+		err = tutil.RunInNewUpdateTxn(c.kvdb, deleteFunc)
+	} else {
+		err = deleteFunc(txn)
+	}
+
+	return
 }
 
 // GetOne for get a document by document id
@@ -259,6 +232,18 @@ func (c *Collection) GetOne(did int64, txn mondis.ProviderTxn) (data bson.M, err
 
 // Count for total number of documents
 func (c *Collection) Count(txn mondis.ProviderTxn) (n int, err error) {
+	// prologue start
+	err = c.db.checkState()
+	if err != nil {
+		return
+	}
+	err = c.db.closer.Add(1)
+	if err != nil {
+		return
+	}
+	defer c.db.closer.Done()
+	// prologue end
+
 	if txn == nil {
 		txn = c.kvdb.NewTransaction(false)
 		defer txn.Discard()
@@ -274,36 +259,48 @@ func (c *Collection) Count(txn mondis.ProviderTxn) (n int, err error) {
 
 // DeleteAll for delete all documents of a collection
 func (c *Collection) DeleteAll(txn mondis.ProviderTxn) (n int, err error) {
-	var oneshot bool
-	if txn == nil {
-		oneshot = true
-		txn = c.kvdb.NewTransaction(true)
-		defer txn.Discard()
+	// prologue start
+	err = c.db.checkState()
+	if err != nil {
+		return
+	}
+	err = c.db.closer.Add(1)
+	if err != nil {
+		return
+	}
+	defer c.db.closer.Done()
+	// prologue end
+
+	if txn != nil {
+		n, err = c.deleteAllWithTxn(txn)
+		return
 	}
 
-	committed := 0
+	err = tutil.RunInNewTxn(c.kvdb, func(txn mondis.ProviderTxn) error {
+		newN, err := c.deleteAllWithTxn(txn)
+		n += newN
+		return err
+	})
+
+	return
+}
+
+func (c *Collection) deleteAllWithTxn(txn mondis.ProviderTxn) (n int, err error) {
+	// committed := 0
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, c.cid)
-	err = txn.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
+	scanErr := txn.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
 		err = txn.Delete(append([]byte(nil), key...))
-		if err == provider.ErrTxnTooBig && oneshot {
-			err = txn.Commit()
-			if err == nil {
-				committed = n + 1
-			}
-		}
 		if err != nil {
 			return false
 		}
 		n++
 		return true
 	})
-
-	if err == nil && oneshot {
-		err = txn.Commit()
-		if err != nil {
-			n = committed
-		}
+	if err != nil {
+		return
 	}
+	err = scanErr
+
 	return
 }
 

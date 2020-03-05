@@ -11,6 +11,7 @@ import (
 	"github.com/zhiqiangxu/mondis/document"
 	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/mondis/server"
+	"github.com/zhiqiangxu/mondis/structure"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -290,6 +291,76 @@ func TestDocument(t *testing.T) {
 	err = c.DeleteOne(did, nil)
 	if err != document.ErrAlreadyClosed {
 		t.Fatal("err != document.ErrAlreadyClosed")
+	}
+
+}
+
+func TestList(t *testing.T) {
+	kvdb := provider.NewBadger()
+	err := kvdb.Open(mondis.KVOption{Dir: dataDir})
+	if err != nil {
+		t.Fatal("kvdb.Open", err)
+	}
+
+	txn := kvdb.NewTransaction(true)
+	txStruct := structure.New(txn, []byte("___"))
+	list1 := []byte("list1")
+	l, err := txStruct.LLen(list1)
+	if err != nil || l != 0 {
+		t.Fatal(err, l)
+	}
+
+	err = txStruct.LPush(list1, []byte("item1"), []byte("item2"))
+	if err != nil {
+		t.Fail()
+	}
+	l, err = txStruct.LLen(list1)
+	if err != nil || l != 2 {
+		t.Fatal(err, l)
+	}
+
+	item, err := txStruct.LPop(list1)
+	if err != nil {
+		t.Fail()
+	}
+	if !bytes.Equal(item, []byte("item2")) {
+		t.Fail()
+	}
+	item, err = txStruct.LPop(list1)
+	if err != nil {
+		t.Fail()
+	}
+	if !bytes.Equal(item, []byte("item1")) {
+		t.Fail()
+	}
+
+	err = txStruct.RPush(list1, []byte("item1"), []byte("item2"))
+	if err != nil {
+		t.Fail()
+	}
+	l, err = txStruct.LLen(list1)
+	if err != nil || l != 2 {
+		t.Fatal(err, l)
+	}
+
+	item, err = txStruct.LPop(list1)
+	if err != nil {
+		t.Fail()
+	}
+	if !bytes.Equal(item, []byte("item1")) {
+		t.Fail()
+	}
+	item, err = txStruct.LPop(list1)
+	if err != nil {
+		t.Fail()
+	}
+	if !bytes.Equal(item, []byte("item2")) {
+		t.Fail()
+	}
+
+	l, err = txStruct.LLen(list1)
+	if err != nil || l != 0 {
+		t.Fatal(err, l)
 	}
 
 }
