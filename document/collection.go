@@ -104,15 +104,29 @@ var (
 	ErrIndexNameEmpty = errors.New("index name cannot be empty")
 	// ErrIndexFieldsEmpty when index fields are empty
 	ErrIndexFieldsEmpty = errors.New("index fields cannot be empty")
+	// ErrDocIDExists when document withe specified id exists
+	ErrDocIDExists = errors.New("document withe specified id exists")
 )
 
-// UpdateOne for update an existing document in collection
-func (c *Collection) UpdateOne(did int64, doc bson.M, txn mondis.ProviderTxn) (updated bool, err error) {
-	updated, _, err = c.updateOne(did, doc, false, txn)
+// InsertOneManaged for insert a new document with specified document id
+func (c *Collection) InsertOneManaged(did int64, doc bson.M, txn mondis.ProviderTxn) (err error) {
+	_, _, err = c.updateOne(did, doc, updateForInsert, txn)
 	return
 }
 
-func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.ProviderTxn) (updated, isNew bool, err error) {
+// UpdateOne for update an existing document in collection
+func (c *Collection) UpdateOne(did int64, doc bson.M, txn mondis.ProviderTxn) (exists bool, err error) {
+	exists, _, err = c.updateOne(did, doc, updateForUpdate, txn)
+	return
+}
+
+const (
+	updateForUpdate int8 = iota
+	updateForUpsert
+	updateForInsert
+)
+
+func (c *Collection) updateOne(did int64, doc bson.M, updateFor int8, txn mondis.ProviderTxn) (existsForUpdate, isNewForUpsert bool, err error) {
 	data, err := bson.Marshal(doc)
 	if err != nil {
 		return
@@ -133,13 +147,23 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.Pr
 	docKey := EncodeCollectionDocumentKey(nil, c.cid, did)
 
 	updateFunc := func(txn mondis.ProviderTxn) (err error) {
-		exists, err := txn.Exists(docKey)
+		existsForUpdate, err = txn.Exists(docKey)
 		if err != nil {
 			return
 		}
 
-		if !exists && !upsert {
-			return
+		switch updateFor {
+		case updateForUpdate:
+			if !existsForUpdate {
+				return
+			}
+		case updateForUpsert:
+			isNewForUpsert = !existsForUpdate
+		case updateForInsert:
+			if existsForUpdate {
+				err = ErrDocIDExists
+				return
+			}
 		}
 
 		err = txn.Set(docKey, data, nil)
@@ -147,8 +171,6 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.Pr
 			return
 		}
 
-		updated = true
-		isNew = !exists
 		return
 	}
 
@@ -163,7 +185,7 @@ func (c *Collection) updateOne(did int64, doc bson.M, upsert bool, txn mondis.Pr
 
 // UpsertOne for upsert an existing document in collection
 func (c *Collection) UpsertOne(did int64, doc bson.M, txn mondis.ProviderTxn) (isNew bool, err error) {
-	_, isNew, err = c.updateOne(did, doc, true, txn)
+	_, isNew, err = c.updateOne(did, doc, updateForUpsert, txn)
 	return
 }
 

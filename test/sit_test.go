@@ -247,6 +247,19 @@ func TestDocument(t *testing.T) {
 		t.Fatal("c.DeleteOne", err)
 	}
 
+	err = c.InsertOneManaged(1000, bson.M{key: "value"}, nil)
+	if err != nil {
+		t.Fatal("c.InsertOneManaged", err)
+	}
+	n, err = c.Count(nil)
+	if err != nil || n != 1 {
+		t.Fatal("c.Count")
+	}
+	err = c.DeleteOne(1000, nil)
+	if err != nil {
+		t.Fatal("c.DeleteOne", err)
+	}
+
 	_, err = c.GetOne(did, nil)
 	if err != document.ErrDocNotFound {
 		t.Fatal("err != document.ErrDocNotFound", err)

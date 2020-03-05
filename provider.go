@@ -29,7 +29,7 @@ type (
 	// CommonKVOP for common operations on kv
 	CommonKVOP interface {
 		Set(k, v []byte, meta *VMetaReq) error
-		Exists(k []byte) (bool, error)
+		Exists(k []byte) (bool, error) // maybe cheaper than Get
 		Get(k []byte) ([]byte, VMetaResp, error)
 		Delete(key []byte) error
 	}
