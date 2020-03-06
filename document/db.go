@@ -1,7 +1,6 @@
 package document
 
 import (
-	"encoding/binary"
 	"sync"
 
 	"errors"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/kv"
+	"github.com/zhiqiangxu/mondis/kv/numeric"
 	"github.com/zhiqiangxu/util/closer"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
@@ -168,17 +168,17 @@ func (db *DB) getCollectionID(name string) (cid int64, err error) {
 	txn := db.kvdb.NewTransaction(true)
 	defer txn.Discard()
 
+	var ucid uint64
+
 	v, _, err := txn.Get(cn2idKey)
 	if err != nil {
 		if err == kv.ErrKeyNotFound {
-			var ucid uint64
 			ucid, err = db.collectionSequence.Next()
 			if err != nil {
 				return
 			}
 
-			var data [8]byte
-			binary.BigEndian.PutUint64(data[:], ucid)
+			data := numeric.Encode2Binary(ucid, nil)
 			err = txn.Set(cn2idKey, data[:], nil)
 			if err != nil {
 				return
@@ -192,6 +192,10 @@ func (db *DB) getCollectionID(name string) (cid int64, err error) {
 		return
 	}
 
-	cid = int64(binary.BigEndian.Uint64(v))
+	ucid, err = numeric.DecodeFromBinary(v)
+	if err != nil {
+		return
+	}
+	cid = int64(ucid)
 	return
 }

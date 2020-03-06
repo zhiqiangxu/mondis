@@ -2,12 +2,10 @@ package structure
 
 import (
 	"bytes"
-	"encoding/binary"
-	"strconv"
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/kv"
-	"github.com/zhiqiangxu/util"
+	"github.com/zhiqiangxu/mondis/kv/numeric"
 )
 
 // HashPair is the pair for (field, value) in a hash.
@@ -21,9 +19,7 @@ type hashMeta struct {
 }
 
 func (meta hashMeta) Value() []byte {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf[0:8], uint64(meta.FieldCount))
-	return buf
+	return numeric.Encode2Binary(uint64(meta.FieldCount), nil)
 }
 
 func (meta hashMeta) IsEmpty() bool {
@@ -45,7 +41,7 @@ func (t *TxStructure) HGet(key []byte, field []byte) (value []byte, err error) {
 }
 
 func (t *TxStructure) hashFieldIntegerVal(val int64) []byte {
-	return []byte(strconv.FormatInt(val, 10))
+	return numeric.Encode2Human(val)
 }
 
 // HInc increments the integer value of a hash field, by step, returns
@@ -54,7 +50,7 @@ func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err e
 	err = t.updateHash(key, field, func(oldValue []byte) ([]byte, error) {
 		if oldValue != nil {
 			var err error
-			n, err = strconv.ParseInt(string(oldValue), 10, 64)
+			n, err = numeric.DecodeFromHuman(oldValue)
 			if err != nil {
 				return nil, err
 			}
@@ -78,7 +74,7 @@ func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
 		return
 	}
 
-	n, err = strconv.ParseInt(util.String(value), 10, 64)
+	n, err = numeric.DecodeFromHuman(value)
 	return
 }
 
@@ -318,12 +314,11 @@ func (t *TxStructure) loadHashMeta(metaKey []byte) (m hashMeta, err error) {
 		return
 	}
 
-	if len(v) != 8 {
-		err = ErrInvalidHashMetaData
+	uFieldCount, err := numeric.DecodeFromBinary(v)
+	if err != nil {
 		return
 	}
-
-	m.FieldCount = int64(binary.BigEndian.Uint64(v[0:8]))
+	m.FieldCount = int64(uFieldCount)
 	return
 }
 

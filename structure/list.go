@@ -1,9 +1,8 @@
 package structure
 
 import (
-	"encoding/binary"
-
 	"github.com/zhiqiangxu/mondis/kv"
+	"github.com/zhiqiangxu/mondis/kv/numeric"
 )
 
 type listMeta struct {
@@ -12,9 +11,9 @@ type listMeta struct {
 }
 
 func (meta listMeta) Value() []byte {
-	buf := make([]byte, 16)
-	binary.BigEndian.PutUint64(buf[0:8], uint64(meta.LIndex))
-	binary.BigEndian.PutUint64(buf[8:16], uint64(meta.RIndex))
+	buf := make([]byte, 0, 16)
+	buf = numeric.Encode2Binary(uint64(meta.LIndex), buf)
+	buf = numeric.Encode2Binary(uint64(meta.RIndex), buf)
 	return buf
 }
 
@@ -213,8 +212,17 @@ func (t *TxStructure) loadListMeta(metaKey []byte) (m listMeta, err error) {
 		return
 	}
 
-	m.LIndex = int64(binary.BigEndian.Uint64(v[0:8]))
-	m.RIndex = int64(binary.BigEndian.Uint64(v[8:16]))
+	uLIndex, err := numeric.DecodeFromBinary(v[0:8])
+	if err != nil {
+		return
+	}
+	uRIndex, err := numeric.DecodeFromBinary(v[8:16])
+	if err != nil {
+		return
+	}
+
+	m.LIndex = int64(uLIndex)
+	m.RIndex = int64(uRIndex)
 	return
 }
 

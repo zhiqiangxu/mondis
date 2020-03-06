@@ -7,8 +7,6 @@ import (
 )
 
 var (
-	// ErrInvalidHashMetaData used by TxStructure
-	ErrInvalidHashMetaData = errors.New("invalid hash meta data")
 	// ErrInvalidHashDataKey used by TxStructure
 	ErrInvalidHashDataKey = errors.New("invalid hash data key")
 	// ErrKeyHasNoPrefix used by TxStructure

@@ -1,11 +1,11 @@
 package document
 
 import (
-	"encoding/binary"
 	"sync"
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/kv"
+	"github.com/zhiqiangxu/mondis/kv/numeric"
 )
 
 // Sequence for allocating auto incrementing pk
@@ -47,14 +47,17 @@ func (s *Sequence) updateLease() (err error) {
 	case err != nil:
 		return
 	default:
-		num := binary.BigEndian.Uint64(val)
+		var num uint64
+		num, err = numeric.DecodeFromBinary(val)
+		if err != nil {
+			return
+		}
 		s.next = num
 	}
 
 	lease := s.next + s.bandwidth
-	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], lease)
-	err = txn.Set(s.key, buf[:], nil)
+	buf := numeric.Encode2Binary(lease, nil)
+	err = txn.Set(s.key, buf, nil)
 	if err != nil {
 		return
 	}
@@ -80,9 +83,8 @@ func (s *Sequence) ReleaseRemaining() (err error) {
 	txn := s.kvdb.NewTransaction(true)
 	defer txn.Discard()
 
-	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], s.next)
-	err = txn.Set(s.key, buf[:], nil)
+	buf := numeric.Encode2Binary(s.next, nil)
+	err = txn.Set(s.key, buf, nil)
 	if err != nil {
 		return
 	}
