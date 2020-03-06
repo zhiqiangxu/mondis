@@ -60,6 +60,37 @@ func EncodeUint64Desc(b []byte, v uint64) []byte {
 	return EncodeUint64(b, ^v)
 }
 
+// EncodeUint8 for convert uint8 to memcomparable-format
+func EncodeUint8(b []byte, v uint8) []byte {
+	return append(b, v)
+}
+
+// EncodeUint8Desc bitwise reverses v before EncodeUint8
+func EncodeUint8Desc(b []byte, v uint8) []byte {
+	return EncodeUint8(b, ^v)
+}
+
+// DecodeUint8 is reverse for EncodeUint8
+func DecodeUint8(b []byte) (leftover []byte, v uint8, err error) {
+	if len(b) < 1 {
+		err = ErrInsufficientBytesToDecode
+		return
+	}
+
+	v = uint8(b[0])
+	leftover = b[1:]
+	return
+}
+
+// DecodeUint8Desc is reverse for EncodeUint8Desc
+func DecodeUint8Desc(b []byte) (leftover []byte, v uint8, err error) {
+	leftover, v, err = DecodeUint8(b)
+	if err == nil {
+		v = ^v
+	}
+	return
+}
+
 var (
 	// ErrInsufficientBytesToDecode when insufficient bytes to decode value
 	ErrInsufficientBytesToDecode = errors.New("insufficient bytes to decode value")

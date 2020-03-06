@@ -21,26 +21,26 @@ func TestTypes(t *testing.T) {
 
 	bytes, err := bson.Marshal(m)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 
 	var d bson.M
 	err = bson.Unmarshal(bytes, &d)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 
 	if !reflect.DeepEqual(m, d) {
-		t.Fail()
+		t.FailNow()
 	}
 
 	r := bson.Raw(bytes)
 	eles, err := r.Elements()
 	if err != nil || len(eles) != 5 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	// if eles[0].Key() != "key" && eles[0].Value().Type != bsontype.Int32 {
-	// 	t.Fail()
+	// 	t.FailNow()
 	// }
 }

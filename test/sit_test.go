@@ -314,9 +314,10 @@ func TestList(t *testing.T) {
 	if err != nil {
 		t.Fatal("kvdb.Open", err)
 	}
+	defer kvdb.Close()
 
 	txn := kvdb.NewTransaction(true)
-	txStruct := structure.New(txn, []byte("___"))
+	txStruct := structure.New(txn, []byte("l"))
 	list1 := []byte("list1")
 	l, err := txStruct.LLen(list1)
 	if err != nil || l != 0 {
@@ -325,7 +326,7 @@ func TestList(t *testing.T) {
 
 	err = txStruct.LPush(list1, []byte("item1"), []byte("item2"))
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	l, err = txStruct.LLen(list1)
 	if err != nil || l != 2 {
@@ -334,22 +335,22 @@ func TestList(t *testing.T) {
 
 	item, err := txStruct.LPop(list1)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	if !bytes.Equal(item, []byte("item2")) {
-		t.Fail()
+		t.FailNow()
 	}
 	item, err = txStruct.LPop(list1)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	if !bytes.Equal(item, []byte("item1")) {
-		t.Fail()
+		t.FailNow()
 	}
 
 	err = txStruct.RPush(list1, []byte("item1"), []byte("item2"))
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	l, err = txStruct.LLen(list1)
 	if err != nil || l != 2 {
@@ -358,17 +359,17 @@ func TestList(t *testing.T) {
 
 	item, err = txStruct.LPop(list1)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	if !bytes.Equal(item, []byte("item1")) {
-		t.Fail()
+		t.FailNow()
 	}
 	item, err = txStruct.LPop(list1)
 	if err != nil {
-		t.Fail()
+		t.FailNow()
 	}
 	if !bytes.Equal(item, []byte("item2")) {
-		t.Fail()
+		t.FailNow()
 	}
 
 	l, err = txStruct.LLen(list1)
@@ -376,4 +377,90 @@ func TestList(t *testing.T) {
 		t.Fatal(err, l)
 	}
 
+	err = txn.Commit()
+	if err != nil {
+		t.FailNow()
+	}
+}
+
+func TestHash(t *testing.T) {
+	kvdb := provider.NewBadger()
+	err := kvdb.Open(mondis.KVOption{Dir: dataDir})
+	if err != nil {
+		t.Fatal("kvdb.Open", err)
+	}
+	defer kvdb.Close()
+
+	txn := kvdb.NewTransaction(true)
+	txStruct := structure.New(txn, []byte("l"))
+	hash1 := []byte("hash1")
+
+	err = txStruct.HClear(hash1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	f1 := []byte("f1")
+	v1 := []byte("v1")
+	f2 := []byte("f2")
+	v2 := []byte("v2")
+	f3 := []byte("f3")
+	v3 := []byte("v3")
+	err = txStruct.HSet(hash1, f1, v1)
+	if err != nil {
+		t.FailNow()
+	}
+	err = txStruct.HSet(hash1, f2, v2)
+	if err != nil {
+		t.FailNow()
+	}
+	err = txStruct.HSet(hash1, f3, v3)
+	if err != nil {
+		t.FailNow()
+	}
+
+	n, err := txStruct.HLen(hash1)
+	if err != nil || n != 3 {
+		t.FailNow()
+	}
+
+	err = txStruct.HDel(hash1, f1)
+	if err != nil {
+		t.FailNow()
+	}
+	n, err = txStruct.HLen(hash1)
+	if err != nil || n != 2 {
+		t.FailNow()
+	}
+	err = txStruct.HSet(hash1, f1, v1)
+	if err != nil {
+		t.FailNow()
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		t.FailNow()
+	}
+
+	txn = kvdb.NewTransaction(true)
+	txStruct = structure.New(txn, []byte("l"))
+	pairs, err := txStruct.HGetN(hash1, 3)
+	if err != nil {
+		t.FailNow()
+	}
+	pairsDesc, err := txStruct.HGetNDesc(hash1, 3)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if len(pairs) != 3 || len(pairsDesc) != 3 {
+		t.FailNow()
+	}
+
+	for i, p := range pairs {
+		pdesc := pairsDesc[2-i]
+		if !(bytes.Equal(p.Field, pdesc.Field) && bytes.Equal(p.Value, pdesc.Value)) {
+			t.FailNow()
+		}
+	}
 }

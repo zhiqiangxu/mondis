@@ -7,6 +7,12 @@ import (
 )
 
 var (
+	// ErrInvalidHashMetaData used by TxStructure
+	ErrInvalidHashMetaData = errors.New("invalid hash meta data")
+	// ErrInvalidHashDataKey used by TxStructure
+	ErrInvalidHashDataKey = errors.New("invalid hash data key")
+	// ErrKeyHasNoPrefix used by TxStructure
+	ErrKeyHasNoPrefix = errors.New("key has no prefix")
 	// ErrInvalidListMetaData used by TxStructure
 	ErrInvalidListMetaData = errors.New("invalid list meta data")
 	// ErrListIndexOutOfRange used by TxStructure

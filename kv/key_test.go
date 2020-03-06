@@ -17,32 +17,32 @@ func TestNext(t *testing.T) {
 	nextKey := Key(seekKey).Next()
 	cmp := bytes.Compare(nextKey, keyA)
 	if cmp != -1 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	// Use next partial key, we can skip all index keys with first column value equal to "abc".
 	nextPartialKey := Key(seekKey).PrefixNext()
 	if !bytes.Equal(nextPartialKey, []byte{'a', 'b', 'c', 0, 0, 0, 0, 0, 251}) {
-		t.Fail()
+		t.FailNow()
 	}
 	cmp = bytes.Compare(nextPartialKey, keyA)
 	if cmp != 1 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	if !bytes.Equal(Key([]byte("abc")).PrefixNext(), []byte("abd")) {
-		t.Fail()
+		t.FailNow()
 	}
 	// this is actually comparing [a, b, c, 0, 0, 0, 0, 0, 251] and [a, b, c, a, 0, 0, 0, 0, 251]
 	cmp = bytes.Compare(nextPartialKey, keyB)
 	if cmp != -1 {
-		t.Fail()
+		t.FailNow()
 	}
 }
 
 func TestIsPoint(t *testing.T) {
 	if bytes.Compare([]byte("abd"), []byte("abca")) <= 0 {
-		t.Fail()
+		t.FailNow()
 	}
 	tests := []struct {
 		start   []byte
@@ -96,7 +96,7 @@ func TestIsPoint(t *testing.T) {
 			EndKey:   tt.end,
 		}
 		if kr.IsPoint() != tt.isPoint {
-			t.Fail()
+			t.FailNow()
 		}
 	}
 }

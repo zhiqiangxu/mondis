@@ -35,7 +35,7 @@ func RunInNewUpdateTxn(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error) (err 
 	txn := kvdb.NewTransaction(true)
 	defer txn.Discard()
 
-	txn, err = TryCommitWhenTxnTooBig(kvdb, txn, f)
+	err = f(txn)
 	if err != nil {
 		return
 	}
