@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/pb"
-	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/qrpc"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
@@ -182,7 +182,7 @@ func handleTxnSet(txn mondis.ProviderTxn, req *pb.SetRequest, resp *pb.SetRespon
 	err := txn.Set(req.Key, req.Value, meta)
 	if err != nil {
 
-		if err == provider.ErrTxnTooBig {
+		if err == kv.ErrTxnTooBig {
 			resp.Code = CodeTxnTooBig
 			resp.Msg = err.Error()
 		} else {
@@ -230,7 +230,7 @@ func handleExists(kvop mondis.ProviderKVOP, req *pb.ExistsRequest, resp *pb.Exis
 func handleGet(kvop mondis.ProviderKVOP, req *pb.GetRequest, resp *pb.GetResponse) {
 	value, meta, err := kvop.Get(req.Key)
 	if err != nil {
-		if err == provider.ErrKeyNotFound {
+		if err == kv.ErrKeyNotFound {
 			resp.Code = CodeKeyNotFound
 			resp.Msg = err.Error()
 		} else {
@@ -262,7 +262,7 @@ func handleDelete(kvdb mondis.KVDB, req *pb.DeleteRequest, resp *pb.DeleteRespon
 func handleTxnDelete(txn mondis.ProviderTxn, req *pb.DeleteRequest, resp *pb.DeleteResponse) {
 	err := txn.Delete(req.Key)
 	if err != nil {
-		if err == provider.ErrTxnTooBig {
+		if err == kv.ErrTxnTooBig {
 			resp.Code = CodeTxnTooBig
 			resp.Msg = err.Error()
 		} else {

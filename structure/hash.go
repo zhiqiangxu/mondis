@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/util"
 )
 
@@ -69,7 +69,7 @@ func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err e
 // HGetInt64 gets int64 value of a hash field.
 func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
 	value, err := t.HGet(key, field)
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = nil
 		return
 	}
@@ -105,7 +105,7 @@ func (t *TxStructure) HDel(key []byte, fields ...[]byte) (err error) {
 		dataKey := t.encodeHashDataKey(key, field)
 
 		_, err = t.loadHashValue(dataKey)
-		if err == provider.ErrKeyNotFound {
+		if err == kv.ErrKeyNotFound {
 			err = nil
 			continue
 		}
@@ -268,7 +268,7 @@ func (t *TxStructure) updateHash(key []byte, field []byte, fn func(oldValue []by
 	oldValue, err := t.loadHashValue(dataKey)
 
 	var isNew bool
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		isNew = true
 		err = nil
 	}
@@ -310,7 +310,7 @@ func (t *TxStructure) updateHash(key []byte, field []byte, fn func(oldValue []by
 
 func (t *TxStructure) loadHashMeta(metaKey []byte) (m hashMeta, err error) {
 	v, _, err := t.txn.Get(metaKey)
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = nil
 		return
 	}

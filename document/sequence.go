@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/kv"
 )
 
 // Sequence for allocating auto incrementing pk
@@ -42,7 +42,7 @@ func (s *Sequence) updateLease() (err error) {
 
 	val, _, err := txn.Get(s.key)
 	switch {
-	case err == provider.ErrKeyNotFound:
+	case err == kv.ErrKeyNotFound:
 		s.next = 0
 	case err != nil:
 		return

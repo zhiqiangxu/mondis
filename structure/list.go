@@ -3,7 +3,7 @@ package structure
 import (
 	"encoding/binary"
 
-	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/kv"
 )
 
 type listMeta struct {
@@ -197,7 +197,7 @@ func (t *TxStructure) LClear(key []byte) (err error) {
 
 func (t *TxStructure) loadListMeta(metaKey []byte) (m listMeta, err error) {
 	v, _, err := t.txn.Get(metaKey)
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = nil
 	}
 	if err != nil {

@@ -3,6 +3,7 @@ package provider
 import (
 	"github.com/dgraph-io/badger"
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/kv"
 )
 
 // Txn is mondis wrapper for badger.Txn
@@ -12,7 +13,7 @@ type Txn badger.Txn
 func (txn *Txn) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 	defer func() {
 		if err == badger.ErrTxnTooBig {
-			err = ErrTxnTooBig
+			err = kv.ErrTxnTooBig
 		}
 	}()
 
@@ -46,7 +47,7 @@ func (txn *Txn) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 	item, err := (*badger.Txn)(txn).Get(k)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			err = ErrKeyNotFound
+			err = kv.ErrKeyNotFound
 		}
 		return
 	}
@@ -65,7 +66,7 @@ func (txn *Txn) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 func (txn *Txn) Delete(key []byte) (err error) {
 	defer func() {
 		if err == badger.ErrTxnTooBig {
-			err = ErrTxnTooBig
+			err = kv.ErrTxnTooBig
 		}
 	}()
 

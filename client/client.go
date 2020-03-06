@@ -2,8 +2,8 @@ package client
 
 import (
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/pb"
-	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/mondis/server"
 	"github.com/zhiqiangxu/qrpc"
 )
@@ -54,7 +54,7 @@ func parseSetRespFromFrame(respFrame *qrpc.Frame) (err error) {
 	if setResp.Code != 0 {
 
 		if setResp.Code == server.CodeTxnTooBig {
-			err = provider.ErrTxnTooBig
+			err = kv.ErrTxnTooBig
 		} else {
 			err = newPBError(setResp.Code, setResp.Msg)
 		}
@@ -145,7 +145,7 @@ func parseGetRespFromFrame(respFrame *qrpc.Frame) (v []byte, meta mondis.VMetaRe
 	if getResp.Code != 0 {
 
 		if getResp.Code == server.CodeKeyNotFound {
-			err = provider.ErrKeyNotFound
+			err = kv.ErrKeyNotFound
 		} else {
 			err = newPBError(getResp.Code, getResp.Msg)
 		}

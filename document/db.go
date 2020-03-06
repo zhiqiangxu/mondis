@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/util/closer"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
@@ -170,7 +170,7 @@ func (db *DB) getCollectionID(name string) (cid int64, err error) {
 
 	v, _, err := txn.Get(cn2idKey)
 	if err != nil {
-		if err == provider.ErrKeyNotFound {
+		if err == kv.ErrKeyNotFound {
 			var ucid uint64
 			ucid, err = db.collectionSequence.Next()
 			if err != nil {

@@ -53,6 +53,7 @@ package main
 
 import (
     "github.com/zhiqiangxu/mondis/client"
+    "github.com/zhiqiangxu/mondis/kv"
     "bytes"
 )
 
@@ -77,8 +78,8 @@ func main() {
 
     // test Get when key not exists
     _, _, err = c.Get(key1)
-    if err != provider.ErrKeyNotFound {
-        panic("shoud got provider.ErrKeyNotFound if key not exists")
+    if err != kv.ErrKeyNotFound {
+        panic("shoud got kv.ErrKeyNotFound if key not exists")
     }
 
     // test Update transaction

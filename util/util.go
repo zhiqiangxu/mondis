@@ -2,7 +2,7 @@ package util
 
 import (
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/provider"
+	"github.com/zhiqiangxu/mondis/kv"
 )
 
 const (
@@ -15,7 +15,7 @@ func TryCommitWhenTxnTooBig(kvdb mondis.KVDB, txn mondis.ProviderTxn, f func(txn
 	tried := 1
 	for {
 		err = f(finalTxn)
-		if err != provider.ErrTxnTooBig {
+		if err != kv.ErrTxnTooBig {
 			return
 		}
 		if tried >= maxTry {

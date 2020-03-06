@@ -9,6 +9,7 @@ import (
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/client"
 	"github.com/zhiqiangxu/mondis/document"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/provider"
 	"github.com/zhiqiangxu/mondis/server"
 	"github.com/zhiqiangxu/mondis/structure"
@@ -66,7 +67,7 @@ func TestBadger(t *testing.T) {
 
 			// test Get when key not exists
 			_, _, err = c.Get(key1)
-			if err != provider.ErrKeyNotFound {
+			if err != kv.ErrKeyNotFound {
 				t.Fatal("Get key1")
 			}
 		}
@@ -92,7 +93,7 @@ func TestBadger(t *testing.T) {
 				}
 
 				_, _, err = txn.Get(key2)
-				if err != provider.ErrKeyNotFound {
+				if err != kv.ErrKeyNotFound {
 					t.Fatal("Update.Get key2")
 				}
 

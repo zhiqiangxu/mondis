@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/kv/compact"
-	"github.com/zhiqiangxu/mondis/provider"
 	tutil "github.com/zhiqiangxu/mondis/util"
 	"github.com/zhiqiangxu/util"
 	"github.com/zhiqiangxu/util/logger"
@@ -240,7 +240,7 @@ func (c *Collection) GetOne(did int64, txn mondis.ProviderTxn) (data bson.M, err
 		defer txn.Discard()
 	}
 	v, _, err := txn.Get(docKey)
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = ErrDocNotFound
 		return
 	}
@@ -349,7 +349,7 @@ func (c *Collection) GetMany(dids []int64, txn mondis.ProviderTxn) (datas []bson
 	for _, did := range dids {
 		docKey := EncodeCollectionDocumentKey(nil, c.cid, did)
 		v, _, err = txn.Get(docKey)
-		if err == provider.ErrKeyNotFound {
+		if err == kv.ErrKeyNotFound {
 			err = ErrDocNotFound
 			return
 		}
@@ -433,7 +433,7 @@ func (c *Collection) CreateIndex(idef IndexDefinition) (iid int64, err error) {
 		err = fmt.Errorf("there already exists index %s on the same columns", string(v))
 		return
 	}
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = nil
 	}
 	if err != nil {
@@ -552,7 +552,7 @@ func (c *Collection) DropIndex(iname string) (exists bool, err error) {
 
 	indexName2IDKey := EncodeCollectionIndexName2IDKey(nil, c.cid, iname)
 	iidv, _, err := txn.Get(indexName2IDKey)
-	if err == provider.ErrKeyNotFound {
+	if err == kv.ErrKeyNotFound {
 		err = nil
 		return
 	}
