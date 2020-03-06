@@ -20,21 +20,21 @@ const (
 )
 
 func (t *TxStructure) encodeHashMetaKey(key []byte) kv.Key {
-	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(key)+1)
+	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(len(key))+1)
 	ek = append(ek, t.prefix...)
 	ek = memcomparable.EncodeBytes(ek, key)
 	return memcomparable.EncodeUint8(ek, uint8(HashMeta))
 }
 
 func (t *TxStructure) hashDataKeyPrefix(key []byte) kv.Key {
-	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(key)+1)
+	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(len(key))+1)
 	ek = append(ek, t.prefix...)
 	ek = memcomparable.EncodeBytes(ek, key)
 	return memcomparable.EncodeUint8(ek, uint8(HashData))
 }
 
 func (t *TxStructure) encodeHashDataKey(key []byte, field []byte) kv.Key {
-	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(key)+1+memcomparable.EncodedBytesLength(field))
+	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(len(key))+1+memcomparable.EncodedBytesLength(len(field)))
 	ek = append(ek, t.prefix...)
 	ek = memcomparable.EncodeBytes(ek, key)
 	ek = memcomparable.EncodeUint8(ek, uint8(HashData))
@@ -68,14 +68,14 @@ func (t *TxStructure) decodeHashDataKey(dk kv.Key) (key, field []byte, err error
 }
 
 func (t *TxStructure) encodeListMetaKey(key []byte) kv.Key {
-	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(key)+1)
+	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(len(key))+1)
 	ek = append(ek, t.prefix...)
 	ek = memcomparable.EncodeBytes(ek, key)
 	return memcomparable.EncodeUint8(ek, uint8(ListMeta))
 }
 
 func (t *TxStructure) encodeListDataKey(key []byte, index int64) kv.Key {
-	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(key)+9)
+	ek := make([]byte, 0, len(t.prefix)+memcomparable.EncodedBytesLength(len(key))+9)
 	ek = append(ek, t.prefix...)
 	ek = memcomparable.EncodeBytes(ek, key)
 	ek = memcomparable.EncodeUint8(ek, uint8(ListData))

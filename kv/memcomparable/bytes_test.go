@@ -31,13 +31,13 @@ func TestBytes(t *testing.T) {
 		t.FailNow()
 	}
 
-	if EncodedBytesLength([]byte{}) != 9 {
+	if EncodedBytesLength(len([]byte{})) != 9 {
 		t.FailNow()
 	}
-	if EncodedBytesLength([]byte{1, 2, 3}) != 9 {
+	if EncodedBytesLength(len([]byte{1, 2, 3})) != 9 {
 		t.FailNow()
 	}
-	if EncodedBytesLength([]byte{1, 2, 3, 4, 5, 6, 7, 8}) != 9*2 {
+	if EncodedBytesLength(len([]byte{1, 2, 3, 4, 5, 6, 7, 8})) != 9*2 {
 		t.FailNow()
 	}
 }

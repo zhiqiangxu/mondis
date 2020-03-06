@@ -126,7 +126,7 @@ func EncodeMetaSequenceKey(buf, keyword []byte) kv.Key {
 // EncodeMetaCollectionName2IDKey returns m_cn2id[cname] to buf
 func EncodeMetaCollectionName2IDKey(buf []byte, cname string) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(metaCName2IDPrefix)+memcomparable.EncodedBytesLength(util.Slice(cname)))
+		buf = make([]byte, 0, len(metaCName2IDPrefix)+memcomparable.EncodedBytesLength(len(cname)))
 	}
 	buf = append(buf, metaCName2IDPrefix...)
 	buf = memcomparable.EncodeBytes(buf, util.Slice(cname))
@@ -157,7 +157,7 @@ func AppendCollectionIndexNamePrefix(buf []byte, cid int64) kv.Key {
 // EncodeCollectionIndexName2IDKey return c_in[iname]
 func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix)+memcomparable.EncodedBytesLength(util.Slice(iname)))
+		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix)+memcomparable.EncodedBytesLength(len(iname)))
 	}
 	buf = append(buf, collectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
