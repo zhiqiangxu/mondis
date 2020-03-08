@@ -13,15 +13,16 @@ import (
 )
 
 const (
-	basePrefix                = "_md_"
-	collectionPrefix          = basePrefix + "c"
+	// BasePrefix for document db
+	BasePrefix                = "_md_"
+	collectionPrefix          = BasePrefix + "c"
 	collectionPrefixLen       = len(collectionPrefix)
 	documentPrefix            = "_d"  // stores all collection documents
 	indexDataPrefix           = "_id" // stores all collection index data
 	columnsIndexedPrefix      = "_ci" // stores all columns with index
 	indexNamePrefix           = "_in" // stores index name => index id
 	indexNamePrefixLen        = len(indexNamePrefix)
-	metaPrefix                = basePrefix + "m"
+	metaPrefix                = BasePrefix + "m"
 	sequencePrefix            = "_s" // stores latest sequence id of all keywords
 	metaSequencePrefix        = metaPrefix + sequencePrefix
 	cName2IDPrefix            = "_cn2id" // stores collection name => collection id

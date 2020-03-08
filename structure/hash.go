@@ -65,10 +65,6 @@ func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err e
 // HGetInt64 gets int64 value of a hash field.
 func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
 	value, err := t.HGet(key, field)
-	if err == kv.ErrKeyNotFound {
-		err = nil
-		return
-	}
 
 	if err != nil {
 		return
