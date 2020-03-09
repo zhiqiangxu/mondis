@@ -448,10 +448,10 @@ func (m *Meta) SetSchemaDiff(diff *model.SchemaDiff) (err error) {
 //	DDLJobReorg: hash
 
 var (
-	mDDLJobListKey    = []byte("DDLJobList")
-	mDDLJobAddIdxList = []byte("DDLJobAddIdxList")
-	mDDLJobHistoryKey = []byte("DDLJobHistory")
-	mDDLJobReorgKey   = []byte("DDLJobReorg")
+	ddlJobListKey       = []byte("DDLJobList")
+	ddlJobAddIdxListKey = []byte("DDLJobAddIdxList")
+	ddlJobHistoryKey    = []byte("DDLJobHistory")
+	ddlJobReorgKey      = []byte("DDLJobReorg")
 )
 
 // JobListKeyType is a key type of the DDL job queue.
@@ -459,9 +459,9 @@ type JobListKeyType []byte
 
 var (
 	// DefaultJobListKey keeps all actions of DDL jobs except "add index".
-	DefaultJobListKey JobListKeyType = mDDLJobListKey
+	DefaultJobListKey JobListKeyType = ddlJobListKey
 	// AddIndexJobListKey only keeps the action of adding index.
-	AddIndexJobListKey JobListKeyType = mDDLJobAddIdxList
+	AddIndexJobListKey JobListKeyType = ddlJobAddIdxListKey
 )
 
 func (m *Meta) enQueueDDLJob(key []byte, job *model.Job) (err error) {
@@ -597,14 +597,14 @@ func (m *Meta) historyJobIDKey(id int64) []byte {
 func (m *Meta) AddHistoryDDLJob(job *model.Job, updateRawArgs bool) (err error) {
 	b, err := job.Encode(updateRawArgs)
 	if err == nil {
-		err = m.txn.HSet(mDDLJobHistoryKey, m.historyJobIDKey(job.ID), b)
+		err = m.txn.HSet(ddlJobHistoryKey, m.historyJobIDKey(job.ID), b)
 	}
 	return
 }
 
 // GetHistoryDDLJob gets a history DDL job.
 func (m *Meta) GetHistoryDDLJob(id int64) (job *model.Job, err error) {
-	value, err := m.txn.HGet(mDDLJobHistoryKey, m.historyJobIDKey(id))
+	value, err := m.txn.HGet(ddlJobHistoryKey, m.historyJobIDKey(id))
 	if err == kv.ErrKeyNotFound {
 		err = ErrJobNotExists
 		return
@@ -633,7 +633,7 @@ func decodeJobs(jobPairs []structure.HashPair) (jobs []*model.Job, err error) {
 
 // GetAllHistoryDDLJobs gets all history DDL jobs.
 func (m *Meta) GetAllHistoryDDLJobs() (jobs []*model.Job, err error) {
-	pairs, err := m.txn.HGetAll(mDDLJobHistoryKey)
+	pairs, err := m.txn.HGetAll(ddlJobHistoryKey)
 	if err != nil {
 		return
 	}
@@ -644,7 +644,7 @@ func (m *Meta) GetAllHistoryDDLJobs() (jobs []*model.Job, err error) {
 
 // GetLastNHistoryDDLJobs gets latest N history ddl jobs.
 func (m *Meta) GetLastNHistoryDDLJobs(num int) (jobs []*model.Job, err error) {
-	pairs, err := m.txn.HGetNDesc(mDDLJobHistoryKey, num)
+	pairs, err := m.txn.HGetNDesc(ddlJobHistoryKey, num)
 	if err != nil {
 		return
 	}
@@ -665,37 +665,37 @@ func (m *Meta) reorgJobEndHandle(id int64) []byte {
 
 // UpdateDDLReorgStartHandle saves the job reorganization latest processed start handle for later resuming.
 func (m *Meta) UpdateDDLReorgStartHandle(job *model.Job, startHandle int64) (err error) {
-	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
+	err = m.txn.HSet(ddlJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
 	return
 }
 
 // UpdateDDLReorgHandle saves the job reorganization latest processed information for later resuming.
 func (m *Meta) UpdateDDLReorgHandle(job *model.Job, startHandle, endHandle, physicalTableID int64) (err error) {
-	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
+	err = m.txn.HSet(ddlJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
 	if err != nil {
 		return
 	}
-	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID), numeric.Encode2Human(endHandle))
+	err = m.txn.HSet(ddlJobReorgKey, m.reorgJobEndHandle(job.ID), numeric.Encode2Human(endHandle))
 	return
 }
 
 // RemoveDDLReorgHandle removes the job reorganization related handles.
 func (m *Meta) RemoveDDLReorgHandle(job *model.Job) (err error) {
-	err = m.txn.HDel(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID))
+	err = m.txn.HDel(ddlJobReorgKey, m.reorgJobStartHandle(job.ID))
 	if err != nil {
 		return
 	}
-	err = m.txn.HDel(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID))
+	err = m.txn.HDel(ddlJobReorgKey, m.reorgJobEndHandle(job.ID))
 	return
 }
 
 // GetDDLReorgHandle gets the latest processed DDL reorganize position.
 func (m *Meta) GetDDLReorgHandle(job *model.Job) (startHandle, endHandle int64, err error) {
-	startHandle, err = m.txn.HGetInt64(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID))
+	startHandle, err = m.txn.HGetInt64(ddlJobReorgKey, m.reorgJobStartHandle(job.ID))
 	if err != nil {
 		return
 	}
-	endHandle, err = m.txn.HGetInt64(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID))
+	endHandle, err = m.txn.HGetInt64(ddlJobReorgKey, m.reorgJobEndHandle(job.ID))
 	if err != nil {
 		return
 	}
