@@ -50,6 +50,7 @@ var (
 	dbPrefix               = []byte("db")
 	collectionPrefix       = []byte("collection")
 	collectionAutoIDPrefix = []byte("collectionAutoID")
+	schemaDiffPrefix       = []byte("schemaDiff")
 )
 
 var (
@@ -397,6 +398,50 @@ func (m *Meta) GetCollection(dbID int64, collectionID int64) (collectionnfo *mod
 	return
 }
 
+// GetBootstrapVersion returns the version of the server which bootstrap the store.
+// If the store is not bootstraped, the version will be zero.
+func (m *Meta) GetBootstrapVersion() (ver int64, err error) {
+	ver, err = m.txn.GetInt64(bootstrapKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	return
+}
+
+// FinishBootstrap finishes bootstrap.
+func (m *Meta) FinishBootstrap(version int64) (err error) {
+	err = m.txn.SetInt64(bootstrapKey, version)
+	return
+}
+
+func (m *Meta) schemaDiffKey(schemaVersion int64) []byte {
+	return []byte(fmt.Sprintf("%s:%d", schemaDiffPrefix, schemaVersion))
+}
+
+// GetSchemaDiff gets the modification information on a given schema version.
+func (m *Meta) GetSchemaDiff(schemaVersion int64) (diff *model.SchemaDiff, err error) {
+	diffKey := m.schemaDiffKey(schemaVersion)
+	data, err := m.txn.Get(diffKey)
+	if err != nil {
+		return
+	}
+	diff = &model.SchemaDiff{}
+	err = json.Unmarshal(data, diff)
+	return
+}
+
+// SetSchemaDiff sets the modification information on a given schema version.
+func (m *Meta) SetSchemaDiff(diff *model.SchemaDiff) (err error) {
+	data, err := json.Marshal(diff)
+	if err != nil {
+		return
+	}
+	diffKey := m.schemaDiffKey(diff.Version)
+	err = m.txn.Set(diffKey, data)
+	return
+}
+
 // DDL job structure
 //	DDLJobList: list jobs
 //	DDLJobHistory: hash
@@ -607,19 +652,52 @@ func (m *Meta) GetLastNHistoryDDLJobs(num int) (jobs []*model.Job, err error) {
 	return
 }
 
-// GetBootstrapVersion returns the version of the server which bootstrap the store.
-// If the store is not bootstraped, the version will be zero.
-func (m *Meta) GetBootstrapVersion() (ver int64, err error) {
-	ver, err = m.txn.GetInt64(bootstrapKey)
-	if err == kv.ErrKeyNotFound {
-		err = nil
-		return
-	}
+func (m *Meta) reorgJobStartHandle(id int64) []byte {
+	return numeric.Encode2Binary(uint64(id), nil)
+}
+
+func (m *Meta) reorgJobEndHandle(id int64) []byte {
+	b := make([]byte, 0, 12)
+	b = numeric.Encode2Binary(uint64(id), b)
+	b = append(b, "_end"...)
+	return b
+}
+
+// UpdateDDLReorgStartHandle saves the job reorganization latest processed start handle for later resuming.
+func (m *Meta) UpdateDDLReorgStartHandle(job *model.Job, startHandle int64) (err error) {
+	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
 	return
 }
 
-// FinishBootstrap finishes bootstrap.
-func (m *Meta) FinishBootstrap(version int64) (err error) {
-	err = m.txn.SetInt64(bootstrapKey, version)
+// UpdateDDLReorgHandle saves the job reorganization latest processed information for later resuming.
+func (m *Meta) UpdateDDLReorgHandle(job *model.Job, startHandle, endHandle, physicalTableID int64) (err error) {
+	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID), numeric.Encode2Human(startHandle))
+	if err != nil {
+		return
+	}
+	err = m.txn.HSet(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID), numeric.Encode2Human(endHandle))
+	return
+}
+
+// RemoveDDLReorgHandle removes the job reorganization related handles.
+func (m *Meta) RemoveDDLReorgHandle(job *model.Job) (err error) {
+	err = m.txn.HDel(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID))
+	if err != nil {
+		return
+	}
+	err = m.txn.HDel(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID))
+	return
+}
+
+// GetDDLReorgHandle gets the latest processed DDL reorganize position.
+func (m *Meta) GetDDLReorgHandle(job *model.Job) (startHandle, endHandle int64, err error) {
+	startHandle, err = m.txn.HGetInt64(mDDLJobReorgKey, m.reorgJobStartHandle(job.ID))
+	if err != nil {
+		return
+	}
+	endHandle, err = m.txn.HGetInt64(mDDLJobReorgKey, m.reorgJobEndHandle(job.ID))
+	if err != nil {
+		return
+	}
 	return
 }

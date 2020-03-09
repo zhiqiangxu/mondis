@@ -53,6 +53,19 @@ type (
 		// DependencyID is the job's ID that the current job depends on.
 		DependencyID int64
 	}
+	// SchemaDiff contains the schema modification at a particular schema version.
+	// It is used to reduce schema reload cost.
+	SchemaDiff struct {
+		Version  int64      `json:"version"`
+		Type     ActionType `json:"type"`
+		SchemaID int64      `json:"schema_id"`
+		TableID  int64      `json:"table_id"`
+
+		// OldTableID is the table ID before truncate, only used by truncate table DDL.
+		OldTableID int64 `json:"old_table_id"`
+		// OldSchemaID is the schema ID before rename table, only used by rename table DDL.
+		OldSchemaID int64 `json:"old_schema_id"`
+	}
 )
 
 // ActionType is the type for DDL action.
