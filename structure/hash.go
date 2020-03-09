@@ -65,7 +65,6 @@ func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err e
 // HGetInt64 gets int64 value of a hash field.
 func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
 	value, err := t.HGet(key, field)
-
 	if err != nil {
 		return
 	}
@@ -78,6 +77,10 @@ func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
 func (t *TxStructure) HLen(key []byte) (l int64, err error) {
 	metaKey := t.encodeHashMetaKey(key)
 	meta, err := t.loadHashMeta(metaKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
 	if err != nil {
 		return
 	}
@@ -89,7 +92,11 @@ func (t *TxStructure) HLen(key []byte) (l int64, err error) {
 func (t *TxStructure) HDel(key []byte, fields ...[]byte) (err error) {
 	metaKey := t.encodeHashMetaKey(key)
 	meta, err := t.loadHashMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	if err != nil {
 		return
 	}
 
@@ -181,8 +188,9 @@ func (t *TxStructure) HGetNDesc(key []byte, n int) (res []HashPair, err error) {
 // HClear removes the hash value of the key.
 func (t *TxStructure) HClear(key []byte) (err error) {
 	metaKey := t.encodeHashMetaKey(key)
-	meta, err := t.loadHashMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	_, err = t.loadHashMeta(metaKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
 		return
 	}
 
@@ -288,6 +296,9 @@ func (t *TxStructure) updateHash(key []byte, field []byte, fn func(oldValue []by
 
 	metaKey := t.encodeHashMetaKey(key)
 	meta, err := t.loadHashMeta(metaKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+	}
 	if err != nil {
 		return
 	}
@@ -302,10 +313,6 @@ func (t *TxStructure) updateHash(key []byte, field []byte, fn func(oldValue []by
 
 func (t *TxStructure) loadHashMeta(metaKey []byte) (m hashMeta, err error) {
 	v, _, err := t.txn.Get(metaKey)
-	if err == kv.ErrKeyNotFound {
-		err = nil
-		return
-	}
 	if err != nil {
 		return
 	}

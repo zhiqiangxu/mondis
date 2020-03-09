@@ -42,3 +42,9 @@ func GetInt64(txn mondis.ProviderTxn, k Key) (n int64, err error) {
 	n, err = numeric.DecodeFromHuman(v)
 	return
 }
+
+// SetInt64 set int64 value for key
+func SetInt64(txn mondis.ProviderTxn, k Key, v int64) (err error) {
+	err = txn.Set(k, numeric.Encode2Human(v), nil)
+	return
+}

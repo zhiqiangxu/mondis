@@ -9,7 +9,7 @@ import (
 // Txn is mondis wrapper for badger.Txn
 type Txn badger.Txn
 
-// Set for implement mondis.Txn
+// Set for implement mondis.ProviderTxn
 func (txn *Txn) Set(k, v []byte, meta *mondis.VMetaReq) (err error) {
 	defer func() {
 		if err == badger.ErrTxnTooBig {
@@ -41,7 +41,7 @@ func (txn *Txn) Exists(k []byte) (exists bool, err error) {
 	return
 }
 
-// Get for implement mondis.Txn
+// Get for implement mondis.ProviderTxn
 func (txn *Txn) Get(k []byte) (v []byte, meta mondis.VMetaResp, err error) {
 
 	item, err := (*badger.Txn)(txn).Get(k)
@@ -74,13 +74,18 @@ func (txn *Txn) Delete(key []byte) (err error) {
 	return
 }
 
-// Commit for implement mondis.Txn
+// StartTS for implement mondis.ProviderTxn
+func (txn *Txn) StartTS() uint64 {
+	return (*badger.Txn)(txn).ReadTs()
+}
+
+// Commit for implement mondis.ProviderTxn
 func (txn *Txn) Commit() (err error) {
 	err = (*badger.Txn)(txn).Commit()
 	return
 }
 
-// Discard for implement mondis.Txn
+// Discard for implement mondis.ProviderTxn
 func (txn *Txn) Discard() {
 	(*badger.Txn)(txn).Discard()
 }

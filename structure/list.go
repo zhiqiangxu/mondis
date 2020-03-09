@@ -40,6 +40,9 @@ func (t *TxStructure) listPush(key []byte, left bool, values ...[]byte) (err err
 
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+	}
 	if err != nil {
 		return
 	}
@@ -77,8 +80,7 @@ func (t *TxStructure) RPop(key []byte) ([]byte, error) {
 func (t *TxStructure) listPop(key []byte, left bool) (data []byte, err error) {
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
-
-	if err != nil || meta.IsEmpty() {
+	if err != nil {
 		return
 	}
 
@@ -115,6 +117,10 @@ func (t *TxStructure) listPop(key []byte, left bool) (data []byte, err error) {
 func (t *TxStructure) LLen(key []byte) (l int64, err error) {
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
 	l = meta.RIndex - meta.LIndex
 	return
 }
@@ -123,7 +129,11 @@ func (t *TxStructure) LLen(key []byte) (l int64, err error) {
 func (t *TxStructure) LGetAll(key []byte) (elements [][]byte, err error) {
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	if err != nil {
 		return
 	}
 
@@ -144,7 +154,7 @@ func (t *TxStructure) LGetAll(key []byte) (elements [][]byte, err error) {
 func (t *TxStructure) LIndex(key []byte, index int64) (data []byte, err error) {
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	if err != nil {
 		return
 	}
 
@@ -161,7 +171,7 @@ func (t *TxStructure) LSet(key []byte, index int64, value []byte) (err error) {
 
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	if err != nil {
 		return
 	}
 
@@ -171,7 +181,7 @@ func (t *TxStructure) LSet(key []byte, index int64, value []byte) (err error) {
 		err = t.txn.Set(t.encodeListDataKey(key, index), value, nil)
 		return
 	}
-	err = ErrListIndexOutOfRange
+	err = kv.ErrKeyNotFound
 	return
 }
 
@@ -179,7 +189,11 @@ func (t *TxStructure) LSet(key []byte, index int64, value []byte) (err error) {
 func (t *TxStructure) LClear(key []byte) (err error) {
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
-	if err != nil || meta.IsEmpty() {
+	if err == kv.ErrKeyNotFound {
+		err = nil
+		return
+	}
+	if err != nil {
 		return
 	}
 
@@ -196,14 +210,7 @@ func (t *TxStructure) LClear(key []byte) (err error) {
 
 func (t *TxStructure) loadListMeta(metaKey []byte) (m listMeta, err error) {
 	v, _, err := t.txn.Get(metaKey)
-	if err == kv.ErrKeyNotFound {
-		err = nil
-	}
 	if err != nil {
-		return
-	}
-
-	if v == nil {
 		return
 	}
 

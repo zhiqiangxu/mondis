@@ -22,6 +22,7 @@ type (
 	// ProviderTxn for Txn for provider
 	ProviderTxn interface {
 		ProviderKVOP
+		StartTS() uint64 // not used yet
 		Commit() error
 		Discard()
 	}

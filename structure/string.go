@@ -23,6 +23,14 @@ func (t *TxStructure) GetInt64(key []byte) (n int64, err error) {
 	return
 }
 
+// SetInt64 will set int64 value for key.
+func (t *TxStructure) SetInt64(key []byte, value int64) (err error) {
+	ek := t.encodeStringDataKey(key)
+
+	err = kv.SetInt64(t.txn, ek, value)
+	return
+}
+
 // Inc increments the integer value of a key by step, returns
 // the value after the increment.
 func (t *TxStructure) Inc(key []byte, step int64) (n int64, err error) {
