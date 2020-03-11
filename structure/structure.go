@@ -13,8 +13,6 @@ var (
 	ErrKeyHasNoPrefix = errors.New("key has no prefix")
 	// ErrInvalidListMetaData used by TxStructure
 	ErrInvalidListMetaData = errors.New("invalid list meta data")
-	// ErrListIndexOutOfRange used by TxStructure
-	ErrListIndexOutOfRange = errors.New("list index out of range")
 )
 
 // TxStructure supports some simple data structures like list
