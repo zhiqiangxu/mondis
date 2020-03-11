@@ -9,7 +9,7 @@ import (
 	"errors"
 
 	"github.com/zhiqiangxu/mondis"
-	"github.com/zhiqiangxu/mondis/document"
+	"github.com/zhiqiangxu/mondis/document/keyspace"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/kv/numeric"
@@ -27,30 +27,36 @@ var (
 )
 
 // Meta structure:
-//	nextGlobalID -> int64
 //	schemaVersion -> int64
+//  schemaDiff:1 -> schema diff data []byte
+//  schemaDiff:2 -> schema diff data []byte
+//  bootstrap 	-> int64
+//	globalID -> int64
+//	dbid -> int64
 //	dbs -> {
 //		db:1 -> db meta data []byte
 //		db:2 -> db meta data []byte
 //	}
 //	db:1 -> {
-//		collection:1 -> collection meta data []byte
-//		collection:2 -> collection meta data []byte
-//		collectionAutoID:1 -> int64
-//		collectionAutoID:2 -> int64
+//		collectionID -> int64
+//		collectionInfo:1 -> collection meta data []byte
+//		collectionInfo:2 -> collection meta data []byte
+//		didSequence:1 -> int64
+//		didSequence:2 -> int64
 //	}
 //
 
 var (
-	metaPrefixBytes        = []byte(document.BasePrefix + "m")
-	dbsKey                 = []byte("dbs")
-	nextGlobalIDKey        = []byte("nextGlobalID")
-	schemaVersionKey       = []byte("schemaVersion")
-	bootstrapKey           = []byte("bootstrap")
-	dbPrefix               = []byte("db")
-	collectionPrefix       = []byte("collection")
-	collectionAutoIDPrefix = []byte("collectionAutoID")
-	schemaDiffPrefix       = []byte("schemaDiff")
+	schemaVersionKey     = []byte("schemaVersion")
+	schemaDiffPrefix     = []byte("schemaDiff")
+	bootstrapKey         = []byte("bootstrap")
+	globalIDKey          = []byte("globalID")
+	dbidKey              = []byte("dbid")
+	dbsKey               = []byte("dbs")
+	dbPrefix             = []byte("db")
+	collectionIDKey      = []byte("collectionID")
+	collectionInfoPrefix = []byte("collectionInfo")
+	didSequencePrefix    = []byte("didSequence")
 )
 
 var (
@@ -68,7 +74,7 @@ var (
 
 // NewMeta creates a Meta in transaction txn.
 func NewMeta(txn mondis.ProviderTxn, jobListKeys ...JobListKeyType) *Meta {
-	t := structure.New(txn, metaPrefixBytes)
+	t := structure.New(txn, keyspace.MetaPrefixBytes)
 	listKey := DefaultJobListKey
 	if len(jobListKeys) != 0 {
 		listKey = jobListKeys[0]
@@ -79,46 +85,16 @@ func NewMeta(txn mondis.ProviderTxn, jobListKeys ...JobListKeyType) *Meta {
 	}
 }
 
-// GenGlobalID generates next id globally.
-func (m *Meta) GenGlobalID() (int64, error) {
-	globalIDMutex.Lock()
-	defer globalIDMutex.Unlock()
-
-	return m.txn.Inc(nextGlobalIDKey, 1)
-}
-
-// GenGlobalIDs generates the next n global IDs.
-func (m *Meta) GenGlobalIDs(n int) ([]int64, error) {
-	globalIDMutex.Lock()
-	defer globalIDMutex.Unlock()
-
-	newID, err := m.txn.Inc(nextGlobalIDKey, int64(n))
-	if err != nil {
-		return nil, err
-	}
-	origID := newID - int64(n)
-	ids := make([]int64, 0, n)
-	for i := origID + 1; i <= newID; i++ {
-		ids = append(ids, i)
-	}
-	return ids, nil
-}
-
-// GetGlobalID gets current global id.
-func (m *Meta) GetGlobalID() (int64, error) {
-	return m.txn.GetInt64(nextGlobalIDKey)
-}
-
-func (m *Meta) dbKey(dbID int64) []byte {
+func dbKeyByID(dbID int64) []byte {
 	return []byte(fmt.Sprintf("%s:%d", dbPrefix, dbID))
 }
 
-func (m *Meta) collectionKey(collectionID int64) []byte {
-	return []byte(fmt.Sprintf("%s:%d", collectionPrefix, collectionID))
+func (m *Meta) collectionKeyByID(collectionID int64) []byte {
+	return []byte(fmt.Sprintf("%s:%d", collectionInfoPrefix, collectionID))
 }
 
-func (m *Meta) collectionAutoIncrementIDKey(collectionID int64) []byte {
-	return []byte(fmt.Sprintf("%s:%d", collectionAutoIDPrefix, collectionID))
+func didSequenceKeyByID(collectionID int64) []byte {
+	return []byte(fmt.Sprintf("%s:%d", didSequencePrefix, collectionID))
 }
 
 func (m *Meta) checkDBExists(dbKey []byte) (err error) {
@@ -157,25 +133,24 @@ func (m *Meta) checkCollectionNotExists(dbKey []byte, collectionKey []byte) (err
 	return
 }
 
-// GenCollectionAutoIncrementID adds step to the auto increment ID of the collection and returns the sum.
-func (m *Meta) GenCollectionAutoIncrementID(dbID, collectionID, step int64) (id int64, err error) {
-	// Check if DB exists.
-	dbKey := m.dbKey(dbID)
-	if err = m.checkDBExists(dbKey); err != nil {
-		return
-	}
-	// Check if collection exists.
-	collectionKey := m.collectionKey(collectionID)
-	if err = m.checkCollectionExists(dbKey, collectionKey); err != nil {
-		return
-	}
-
-	return m.txn.HInc(dbKey, m.collectionAutoIncrementIDKey(collectionID), step)
+// GetGlobalID gets current global id.
+func (m *Meta) GetGlobalID() (int64, error) {
+	return m.txn.GetInt64(globalIDKey)
 }
 
-// GetCollectionAutoIncrementID gets current auto increment id with collection id.
-func (m *Meta) GetCollectionAutoIncrementID(dbID, collectionID int64) (int64, error) {
-	return m.txn.HGetInt64(m.dbKey(dbID), m.collectionAutoIncrementIDKey(collectionID))
+// GenGlobalID generates next global id.
+func (m *Meta) GenGlobalID() (int64, error) {
+	return m.txn.Inc(globalIDKey, 1)
+}
+
+// GetDBID gets current global db id.
+func (m *Meta) GetDBID() (int64, error) {
+	return m.txn.GetInt64(dbidKey)
+}
+
+// GenDBID generates next global db id.
+func (m *Meta) GenDBID() (int64, error) {
+	return m.txn.Inc(dbidKey, 1)
 }
 
 // GetSchemaVersion gets current global schema version.
@@ -190,7 +165,7 @@ func (m *Meta) GenSchemaVersion() (int64, error) {
 
 // CreateDatabase creates a database with db info.
 func (m *Meta) CreateDatabase(dbInfo *model.DBInfo) (err error) {
-	dbKey := m.dbKey(dbInfo.ID)
+	dbKey := dbKeyByID(dbInfo.ID)
 
 	if err = m.checkDBNotExists(dbKey); err != nil {
 		return
@@ -206,7 +181,7 @@ func (m *Meta) CreateDatabase(dbInfo *model.DBInfo) (err error) {
 
 // UpdateDatabase updates a database with db info.
 func (m *Meta) UpdateDatabase(dbInfo *model.DBInfo) (err error) {
-	dbKey := m.dbKey(dbInfo.ID)
+	dbKey := dbKeyByID(dbInfo.ID)
 
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
@@ -220,16 +195,54 @@ func (m *Meta) UpdateDatabase(dbInfo *model.DBInfo) (err error) {
 	return m.txn.HSet(dbsKey, dbKey, data)
 }
 
+// GetCollectionID returns the current cid of dbID
+func (m *Meta) GetCollectionID(dbID int64) (cid int64, err error) {
+	// Check if db exists.
+	dbKey := dbKeyByID(dbID)
+	if err = m.checkDBExists(dbKey); err != nil {
+		return
+	}
+
+	cid, err = m.txn.HGetInt64(dbKey, collectionIDKey)
+	return
+}
+
+// GenCollectionID generates the next cid for dbID
+func (m *Meta) GenCollectionID(dbID int64) (cid int64, err error) {
+	// Check if db exists.
+	dbKey := dbKeyByID(dbID)
+	if err = m.checkDBExists(dbKey); err != nil {
+		return
+	}
+
+	cid, err = m.txn.HInc(dbKey, collectionIDKey, 1)
+	return
+}
+
+// GenCollectionIDs is batch version of GenCollectionID
+// returns (cidStart, cidEnd]
+func (m *Meta) GenCollectionIDs(dbID, n int64) (cidStart, cidEnd int64, err error) {
+	// Check if db exists.
+	dbKey := dbKeyByID(dbID)
+	if err = m.checkDBExists(dbKey); err != nil {
+		return
+	}
+
+	cidEnd, err = m.txn.HInc(dbKey, collectionIDKey, n)
+	cidStart = cidEnd - n
+	return
+}
+
 // CreateCollection creates a collection with CollectoinInfo in database.
 func (m *Meta) CreateCollection(dbID int64, collectionInfo *model.CollectionInfo) (err error) {
 	// Check if db exists.
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKey(collectionInfo.ID)
+	collectionKey := m.collectionKeyByID(collectionInfo.ID)
 	if err = m.checkCollectionNotExists(dbKey, collectionKey); err != nil {
 		return
 	}
@@ -245,7 +258,7 @@ func (m *Meta) CreateCollection(dbID int64, collectionInfo *model.CollectionInfo
 // DropDatabase drops whole database.
 func (m *Meta) DropDatabase(dbID int64) (err error) {
 	// Check if db exists.
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
@@ -265,13 +278,13 @@ func (m *Meta) DropDatabase(dbID int64) (err error) {
 // If delAutoID is true, it will delete the auto_increment id key-value of the collection.
 func (m *Meta) DropCollection(dbID int64, collectionID int64, delAutoID bool) (err error) {
 	// Check if db exists.
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKey(collectionID)
+	collectionKey := m.collectionKeyByID(collectionID)
 	if err = m.checkCollectionExists(dbKey, collectionKey); err != nil {
 		return
 	}
@@ -280,7 +293,7 @@ func (m *Meta) DropCollection(dbID int64, collectionID int64, delAutoID bool) (e
 		return
 	}
 	if delAutoID {
-		if err = m.txn.HDel(dbKey, m.collectionAutoIncrementIDKey(collectionID)); err != nil {
+		if err = m.txn.HDel(dbKey, didSequenceKeyByID(collectionID)); err != nil {
 			return
 		}
 	}
@@ -290,13 +303,13 @@ func (m *Meta) DropCollection(dbID int64, collectionID int64, delAutoID bool) (e
 // UpdateCollection updates the collection with collection info.
 func (m *Meta) UpdateCollection(dbID int64, collectionInfo *model.CollectionInfo) (err error) {
 	// Check if db exists.
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKey(collectionInfo.ID)
+	collectionKey := m.collectionKeyByID(collectionInfo.ID)
 	if err = m.checkCollectionExists(dbKey, collectionKey); err != nil {
 		return
 	}
@@ -312,7 +325,7 @@ func (m *Meta) UpdateCollection(dbID int64, collectionInfo *model.CollectionInfo
 
 // ListCollections shows all collections in database.
 func (m *Meta) ListCollections(dbID int64) (collections []*model.CollectionInfo, err error) {
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
@@ -325,7 +338,7 @@ func (m *Meta) ListCollections(dbID int64) (collections []*model.CollectionInfo,
 	collections = make([]*model.CollectionInfo, 0, len(res)/2)
 	for _, r := range res {
 		// only handle collection meta
-		if !bytes.HasPrefix(r.Field, collectionPrefix) {
+		if !bytes.HasPrefix(r.Field, collectionInfoPrefix) {
 			continue
 		}
 
@@ -362,7 +375,7 @@ func (m *Meta) ListDatabases() (dbs []*model.DBInfo, err error) {
 
 // GetDatabase gets the database value with ID.
 func (m *Meta) GetDatabase(dbID int64) (dbInfo *model.DBInfo, err error) {
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	value, err := m.txn.HGet(dbsKey, dbKey)
 	if err == kv.ErrKeyNotFound {
 		err = ErrDBNotExists
@@ -379,12 +392,12 @@ func (m *Meta) GetDatabase(dbID int64) (dbInfo *model.DBInfo, err error) {
 // GetCollection gets the collection value in database with collectionID.
 func (m *Meta) GetCollection(dbID int64, collectionID int64) (collectionnfo *model.CollectionInfo, err error) {
 	// Check if db exists.
-	dbKey := m.dbKey(dbID)
+	dbKey := dbKeyByID(dbID)
 	if err = m.checkDBExists(dbKey); err != nil {
 		return
 	}
 
-	tableKey := m.collectionKey(collectionID)
+	tableKey := m.collectionKeyByID(collectionID)
 	value, err := m.txn.HGet(dbKey, tableKey)
 	if err == kv.ErrKeyNotFound {
 		err = ErrCollectionNotExists

@@ -27,14 +27,14 @@ func (meta hashMeta) IsEmpty() bool {
 }
 
 // HSet sets the string value of a hash field.
-func (t *TxStructure) HSet(key []byte, field []byte, value []byte) error {
+func (t *TxStructure) HSet(key, field []byte, value []byte) error {
 	return t.updateHash(key, field, func([]byte) ([]byte, error) {
 		return value, nil
 	})
 }
 
 // HGet gets the value of a hash field.
-func (t *TxStructure) HGet(key []byte, field []byte) (value []byte, err error) {
+func (t *TxStructure) HGet(key, field []byte) (value []byte, err error) {
 	dataKey := t.encodeHashDataKey(key, field)
 	value, _, err = t.txn.Get(dataKey)
 	return
@@ -46,7 +46,7 @@ func (t *TxStructure) hashFieldIntegerVal(val int64) []byte {
 
 // HInc increments the integer value of a hash field, by step, returns
 // the value after the increment.
-func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err error) {
+func (t *TxStructure) HInc(key, field []byte, step int64) (n int64, err error) {
 	err = t.updateHash(key, field, func(oldValue []byte) ([]byte, error) {
 		if oldValue != nil {
 			var err error
@@ -63,13 +63,20 @@ func (t *TxStructure) HInc(key []byte, field []byte, step int64) (n int64, err e
 }
 
 // HGetInt64 gets int64 value of a hash field.
-func (t *TxStructure) HGetInt64(key []byte, field []byte) (n int64, err error) {
-	value, err := t.HGet(key, field)
+func (t *TxStructure) HGetInt64(key, field []byte) (value int64, err error) {
+	valueBytes, err := t.HGet(key, field)
 	if err != nil {
 		return
 	}
 
-	n, err = numeric.DecodeFromHuman(value)
+	value, err = numeric.DecodeFromHuman(valueBytes)
+	return
+}
+
+// HSetInt64 sets int64 value of a hash field.
+func (t *TxStructure) HSetInt64(key, field []byte, value int64) (err error) {
+	valueBytes := numeric.Encode2Human(value)
+	err = t.HSet(key, field, valueBytes)
 	return
 }
 
@@ -263,7 +270,7 @@ func (t *TxStructure) iterateHash(key []byte, fn func(k []byte, v []byte) bool) 
 	return
 }
 
-func (t *TxStructure) updateHash(key []byte, field []byte, fn func(oldValue []byte) ([]byte, error)) (err error) {
+func (t *TxStructure) updateHash(key, field []byte, fn func(oldValue []byte) ([]byte, error)) (err error) {
 	dataKey := t.encodeHashDataKey(key, field)
 	oldValue, err := t.loadHashValue(dataKey)
 

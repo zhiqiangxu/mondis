@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/zhiqiangxu/mondis/document/keyspace"
 	"github.com/zhiqiangxu/mondis/kv"
 	"github.com/zhiqiangxu/mondis/kv/compact"
 	"github.com/zhiqiangxu/mondis/kv/memcomparable"
@@ -13,24 +14,20 @@ import (
 )
 
 const (
-	// BasePrefix for document db
-	BasePrefix                = "_md_"
-	collectionPrefix          = BasePrefix + "c"
-	collectionPrefixLen       = len(collectionPrefix)
+	collectionPrefixLen       = len(keyspace.CollectionPrefix)
 	documentPrefix            = "_d"  // stores all collection documents
 	indexDataPrefix           = "_id" // stores all collection index data
 	columnsIndexedPrefix      = "_ci" // stores all columns with index
 	indexNamePrefix           = "_in" // stores index name => index id
 	indexNamePrefixLen        = len(indexNamePrefix)
-	metaPrefix                = BasePrefix + "m"
 	sequencePrefix            = "_s" // stores latest sequence id of all keywords
-	metaSequencePrefix        = metaPrefix + sequencePrefix
+	metaSequencePrefix        = keyspace.MetaPrefix + sequencePrefix
 	cName2IDPrefix            = "_cn2id" // stores collection name => collection id
-	metaCName2IDPrefix        = metaPrefix + cName2IDPrefix
+	metaCName2IDPrefix        = keyspace.MetaPrefix + cName2IDPrefix
 	cID2NamePrefix            = "_cid2n" // stores collection id => collection name
-	metaCID2NamePrefix        = metaPrefix + cID2NamePrefix
+	metaCID2NamePrefix        = keyspace.MetaPrefix + cID2NamePrefix
 	indexPrefix               = "_i" // stores index id => index definition
-	metaIndexPrefix           = metaPrefix + indexPrefix
+	metaIndexPrefix           = keyspace.MetaPrefix + indexPrefix
 	reservedKeywordCollection = "collection"
 	reservedKeywordIndex      = "index"
 	collectionIDBandWidth     = 50
@@ -41,16 +38,15 @@ const (
 var (
 	reservedKeywordCollectionBytes = []byte(reservedKeywordCollection)
 	reservedKeywordIndexBytes      = []byte(reservedKeywordIndex)
-	collectionPrefixBytes          = []byte(collectionPrefix)
 	indexNamePrefixBytes           = []byte(indexNamePrefix)
 )
 
 // AppendCollectionDocumentPrefix appends c[cid]_d to buf
 func AppendCollectionDocumentPrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(documentPrefix))
+		buf = make([]byte, 0, collectionPrefixLen+8+len(documentPrefix))
 	}
-	buf = append(buf, collectionPrefix...)
+	buf = append(buf, keyspace.CollectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
 	buf = append(buf, documentPrefix...)
 	return buf
@@ -59,7 +55,7 @@ func AppendCollectionDocumentPrefix(buf []byte, cid int64) kv.Key {
 // EncodeCollectionDocumentKey returns c[cid]_d[did]
 func EncodeCollectionDocumentKey(buf []byte, cid, did int64) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(documentPrefix)+8)
+		buf = make([]byte, 0, collectionPrefixLen+8+len(documentPrefix)+8)
 	}
 
 	buf = AppendCollectionDocumentPrefix(buf, cid)
@@ -70,9 +66,9 @@ func EncodeCollectionDocumentKey(buf []byte, cid, did int64) kv.Key {
 // AppendCollectionIndexDataPrefix appends c[cid]_id to buf
 func AppendCollectionIndexDataPrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexDataPrefix))
+		buf = make([]byte, 0, collectionPrefixLen+8+len(indexDataPrefix))
 	}
-	buf = append(buf, collectionPrefix...)
+	buf = append(buf, keyspace.CollectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
 	buf = append(buf, indexDataPrefix...)
 	return buf
@@ -82,7 +78,7 @@ func AppendCollectionIndexDataPrefix(buf []byte, cid int64) kv.Key {
 func EncodeCollectionColumnsIndexedKey(buf []byte, cid int64, fields []IndexField) kv.Key {
 
 	if buf == nil {
-		bufLen := len(collectionPrefix) + 8 + len(columnsIndexedPrefix)
+		bufLen := collectionPrefixLen + 8 + len(columnsIndexedPrefix)
 		for _, field := range fields {
 			bufLen += binary.MaxVarintLen64 + binary.MaxVarintLen64 + len(field.Name)
 		}
@@ -97,7 +93,7 @@ func EncodeCollectionColumnsIndexedKey(buf []byte, cid int64, fields []IndexFiel
 		})
 	}
 
-	buf = append(buf, collectionPrefix...)
+	buf = append(buf, keyspace.CollectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
 	buf = append(buf, columnsIndexedPrefix...)
 
@@ -147,9 +143,9 @@ func EncodeMetaIndexKey(buf []byte, iid int64) kv.Key {
 // AppendCollectionIndexNamePrefix appends c_in[iname] to buf
 func AppendCollectionIndexNamePrefix(buf []byte, cid int64) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix))
+		buf = make([]byte, 0, collectionPrefixLen+8+len(indexNamePrefix))
 	}
-	buf = append(buf, collectionPrefix...)
+	buf = append(buf, keyspace.CollectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
 	buf = append(buf, indexNamePrefix...)
 	return buf
@@ -158,9 +154,9 @@ func AppendCollectionIndexNamePrefix(buf []byte, cid int64) kv.Key {
 // EncodeCollectionIndexName2IDKey return c_in[iname]
 func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) kv.Key {
 	if buf == nil {
-		buf = make([]byte, 0, len(collectionPrefix)+8+len(indexNamePrefix)+memcomparable.EncodedBytesLength(len(iname)))
+		buf = make([]byte, 0, collectionPrefixLen+8+len(indexNamePrefix)+memcomparable.EncodedBytesLength(len(iname)))
 	}
-	buf = append(buf, collectionPrefix...)
+	buf = append(buf, keyspace.CollectionPrefix...)
 	buf = memcomparable.EncodeInt64(buf, cid)
 	buf = append(buf, indexNamePrefix...)
 	buf = memcomparable.EncodeBytes(buf, util.Slice(iname))
@@ -168,7 +164,7 @@ func EncodeCollectionIndexName2IDKey(buf []byte, cid int64, iname string) kv.Key
 }
 
 func hasCollectionPrefix(key kv.Key) bool {
-	return bytes.HasPrefix(key, collectionPrefixBytes)
+	return bytes.HasPrefix(key, keyspace.CollectionPrefixBytes)
 }
 
 func hasIndexNamePrefix(key kv.Key) bool {
@@ -177,7 +173,7 @@ func hasIndexNamePrefix(key kv.Key) bool {
 
 // DecodeCollectionIndexName2IDKey is reverse for EncodeCollectionIndexName2IDKey
 func DecodeCollectionIndexName2IDKey(key kv.Key) (cid int64, iname []byte, err error) {
-	if len(key) <= len(collectionPrefix)+8+len(indexNamePrefix) {
+	if len(key) <= collectionPrefixLen+8+len(indexNamePrefix) {
 		err = fmt.Errorf("invalid collection name to id key - %q", key)
 		return
 	}

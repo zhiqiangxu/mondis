@@ -15,6 +15,13 @@ func (t *TxStructure) Get(key []byte) (value []byte, err error) {
 	return
 }
 
+// Clear a string value key.
+func (t *TxStructure) Clear(key []byte) (err error) {
+	ek := t.encodeStringDataKey(key)
+	err = t.txn.Delete(ek)
+	return
+}
+
 // GetInt64 will try to parse value into int64.
 func (t *TxStructure) GetInt64(key []byte) (n int64, err error) {
 	ek := t.encodeStringDataKey(key)
