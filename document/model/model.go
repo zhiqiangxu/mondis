@@ -10,32 +10,27 @@ import (
 type (
 	// DBInfo for db
 	DBInfo struct {
-		ID          int64
-		Name        string
-		Collections map[int64]*CollectionInfo
-		State       osc.SchemaState
+		ID              int64
+		Name            string
+		Collections     map[string]*CollectionInfo
+		CollectionOrder []string
+		State           osc.SchemaState
 	}
 	// CollectionInfo for collection
 	CollectionInfo struct {
-		ID      int64
-		Name    string
-		Indices []*IndexInfo
-		State   osc.SchemaState
+		ID         int64
+		Name       string
+		Indices    map[string]*IndexInfo
+		IndexOrder []string
+		State      osc.SchemaState
 	}
 	// IndexInfo for index
 	IndexInfo struct {
-		ID           int64
-		Name         string
-		CollectionID int64
-		Columns      []*IndexColumn
-		Unique       bool
-		Primary      bool
-		State        osc.SchemaState
-	}
-	// IndexColumn for index column
-	IndexColumn struct {
-		Name   string
-		Offset int
+		Name    string
+		Columns []string
+		Unique  bool
+		Primary bool
+		State   osc.SchemaState
 	}
 	// Job for a DDL operation
 	Job struct {

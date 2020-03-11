@@ -32,7 +32,6 @@ var (
 //  schemaDiff:2 -> schema diff data []byte
 //  bootstrap 	-> int64
 //	globalID -> int64
-//	dbid -> int64
 //	dbs -> {
 //		db:1 -> db meta data []byte
 //		db:2 -> db meta data []byte
@@ -51,7 +50,6 @@ var (
 	schemaDiffPrefix     = []byte("schemaDiff")
 	bootstrapKey         = []byte("bootstrap")
 	globalIDKey          = []byte("globalID")
-	dbidKey              = []byte("dbid")
 	dbsKey               = []byte("dbs")
 	dbPrefix             = []byte("db")
 	collectionIDKey      = []byte("collectionID")
@@ -89,7 +87,7 @@ func dbKeyByID(dbID int64) []byte {
 	return []byte(fmt.Sprintf("%s:%d", dbPrefix, dbID))
 }
 
-func (m *Meta) collectionKeyByID(collectionID int64) []byte {
+func (m *Meta) collectionInfoKeyByID(collectionID int64) []byte {
 	return []byte(fmt.Sprintf("%s:%d", collectionInfoPrefix, collectionID))
 }
 
@@ -141,16 +139,6 @@ func (m *Meta) GetGlobalID() (int64, error) {
 // GenGlobalID generates next global id.
 func (m *Meta) GenGlobalID() (int64, error) {
 	return m.txn.Inc(globalIDKey, 1)
-}
-
-// GetDBID gets current global db id.
-func (m *Meta) GetDBID() (int64, error) {
-	return m.txn.GetInt64(dbidKey)
-}
-
-// GenDBID generates next global db id.
-func (m *Meta) GenDBID() (int64, error) {
-	return m.txn.Inc(dbidKey, 1)
 }
 
 // GetSchemaVersion gets current global schema version.
@@ -242,8 +230,8 @@ func (m *Meta) CreateCollection(dbID int64, collectionInfo *model.CollectionInfo
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKeyByID(collectionInfo.ID)
-	if err = m.checkCollectionNotExists(dbKey, collectionKey); err != nil {
+	collectionInfoKey := m.collectionInfoKeyByID(collectionInfo.ID)
+	if err = m.checkCollectionNotExists(dbKey, collectionInfoKey); err != nil {
 		return
 	}
 
@@ -252,7 +240,7 @@ func (m *Meta) CreateCollection(dbID int64, collectionInfo *model.CollectionInfo
 		return
 	}
 
-	return m.txn.HSet(dbKey, collectionKey, data)
+	return m.txn.HSet(dbKey, collectionInfoKey, data)
 }
 
 // DropDatabase drops whole database.
@@ -284,12 +272,12 @@ func (m *Meta) DropCollection(dbID int64, collectionID int64, delAutoID bool) (e
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKeyByID(collectionID)
-	if err = m.checkCollectionExists(dbKey, collectionKey); err != nil {
+	collectionInfoKey := m.collectionInfoKeyByID(collectionID)
+	if err = m.checkCollectionExists(dbKey, collectionInfoKey); err != nil {
 		return
 	}
 
-	if err = m.txn.HDel(dbKey, collectionKey); err != nil {
+	if err = m.txn.HDel(dbKey, collectionInfoKey); err != nil {
 		return
 	}
 	if delAutoID {
@@ -309,8 +297,8 @@ func (m *Meta) UpdateCollection(dbID int64, collectionInfo *model.CollectionInfo
 	}
 
 	// Check if collection exists.
-	collectionKey := m.collectionKeyByID(collectionInfo.ID)
-	if err = m.checkCollectionExists(dbKey, collectionKey); err != nil {
+	collectionInfoKey := m.collectionInfoKeyByID(collectionInfo.ID)
+	if err = m.checkCollectionExists(dbKey, collectionInfoKey); err != nil {
 		return
 	}
 
@@ -319,7 +307,7 @@ func (m *Meta) UpdateCollection(dbID int64, collectionInfo *model.CollectionInfo
 		return
 	}
 
-	err = m.txn.HSet(dbKey, collectionKey, data)
+	err = m.txn.HSet(dbKey, collectionInfoKey, data)
 	return
 }
 
@@ -397,8 +385,8 @@ func (m *Meta) GetCollection(dbID int64, collectionID int64) (collectionnfo *mod
 		return
 	}
 
-	tableKey := m.collectionKeyByID(collectionID)
-	value, err := m.txn.HGet(dbKey, tableKey)
+	collectionInfoKey := m.collectionInfoKeyByID(collectionID)
+	value, err := m.txn.HGet(dbKey, collectionInfoKey)
 	if err == kv.ErrKeyNotFound {
 		err = ErrCollectionNotExists
 	}

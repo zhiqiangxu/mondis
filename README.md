@@ -117,4 +117,4 @@ func main() {
 
 The above shows how to use the `key value database api`.
 
-The `document-oriented database api` is under active development, so keep tuned!
+The `document-oriented database api` is under active development, so keep tuned!!!
