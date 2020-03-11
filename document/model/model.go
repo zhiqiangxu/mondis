@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/zhiqiangxu/util/osc"
 )
 
 type (
@@ -11,14 +13,14 @@ type (
 		ID          int64
 		Name        string
 		Collections map[int64]*CollectionInfo
-		State       SchemaState
+		State       osc.SchemaState
 	}
 	// CollectionInfo for collection
 	CollectionInfo struct {
 		ID      int64
 		Name    string
 		Indices []*IndexInfo
-		State   SchemaState
+		State   osc.SchemaState
 	}
 	// IndexInfo for index
 	IndexInfo struct {
@@ -28,7 +30,7 @@ type (
 		Columns      []*IndexColumn
 		Unique       bool
 		Primary      bool
-		State        SchemaState
+		State        osc.SchemaState
 	}
 	// IndexColumn for index column
 	IndexColumn struct {
@@ -48,7 +50,7 @@ type (
 		Args         []interface{} `json:"-"`
 		// RawArgs : We must use json raw message to delay parsing special args.
 		RawArgs     json.RawMessage
-		SchemaState SchemaState
+		SchemaState osc.SchemaState
 		StartTS     uint64 `json:"start_ts"`
 		// DependencyID is the job's ID that the current job depends on.
 		DependencyID int64
@@ -101,43 +103,6 @@ func (action ActionType) String() string {
 		return v
 	}
 	return "none"
-}
-
-// SchemaState is the state for schema elements.
-type SchemaState byte
-
-const (
-	// StateNone means this schema element is absent and can't be used.
-	StateNone SchemaState = iota
-	// StateDeleteOnly means we can only delete items for this schema element.
-	StateDeleteOnly
-	// StateWriteOnly means we can use any write operation on this schema element,
-	// but outer can't read the changed data.
-	StateWriteOnly
-	// StateWriteReorganization means we are re-organizing whole data after write only state.
-	StateWriteReorganization
-	// StateDeleteReorganization means we are re-organizing whole data after delete only state.
-	StateDeleteReorganization
-	// StatePublic means this schema element is ok for all write and read operations.
-	StatePublic
-)
-
-// String implements fmt.Stringer interface.
-func (s SchemaState) String() string {
-	switch s {
-	case StateDeleteOnly:
-		return "delete only"
-	case StateWriteOnly:
-		return "write only"
-	case StateWriteReorganization:
-		return "write reorganization"
-	case StateDeleteReorganization:
-		return "delete reorganization"
-	case StatePublic:
-		return "public"
-	default:
-		return "none"
-	}
 }
 
 // JobState is for job state.
