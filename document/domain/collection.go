@@ -1,6 +1,10 @@
 package domain
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/zhiqiangxu/mondis/document/meta/sequence"
+)
 
 // Collection model
 type Collection struct {
@@ -8,6 +12,8 @@ type Collection struct {
 		sync.RWMutex
 		indexes map[string]*Index
 	}
+	cid         int64
+	didSequence *sequence.Hash
 }
 
 // Index for find an index by name

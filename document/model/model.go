@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/zhiqiangxu/util/osc"
 )
@@ -34,17 +33,13 @@ type (
 	}
 	// Job for a DDL operation
 	Job struct {
-		ID           int64
-		Type         ActionType
-		SchemaID     int64
-		CollectionID int64
-		SchemaName   string
-		State        JobState
-		Error        error
-		ErrorCount   int64
-		Args         []interface{} `json:"-"`
-		// RawArgs : We must use json raw message to delay parsing special args.
-		RawArgs     json.RawMessage
+		ID          int64
+		Type        ActionType
+		State       JobState
+		Error       error
+		ErrorCount  int64
+		Arg         interface{} `json:"-"`
+		RawArg      json.RawMessage
 		SchemaState osc.SchemaState
 		StartTS     uint64 `json:"start_ts"`
 		// DependencyID is the job's ID that the current job depends on.
@@ -144,10 +139,10 @@ func (s JobState) String() string {
 }
 
 // Encode encodes job with json format.
-// updateRawArgs is used to determine whether to update the raw args.
-func (job *Job) Encode(updateRawArgs bool) (b []byte, err error) {
-	if updateRawArgs {
-		job.RawArgs, err = json.Marshal(job.Args)
+// updateRawArg is used to determine whether to update the raw args.
+func (job *Job) Encode(updateRawArg bool) (b []byte, err error) {
+	if updateRawArg {
+		job.RawArg, err = json.Marshal(job.Arg)
 		if err != nil {
 			return
 		}
@@ -158,22 +153,16 @@ func (job *Job) Encode(updateRawArgs bool) (b []byte, err error) {
 	return
 }
 
-// Decode decodes job from the json buffer, we must use DecodeArgs later to
-// decode special args for this job.
+// Decode decodes job from the json buffer, we must use DecodeArg later to
+// decode special arg for this job.
 func (job *Job) Decode(b []byte) (err error) {
 	err = json.Unmarshal(b, job)
 	return
 }
 
-// DecodeArgs decodes job args.
-func (job *Job) DecodeArgs(args ...interface{}) (err error) {
-	job.Args = args
-	err = json.Unmarshal(job.RawArgs, &job.Args)
+// DecodeArg decodes job arg.
+func (job *Job) DecodeArg(arg interface{}) (err error) {
+	job.Arg = arg
+	err = json.Unmarshal(job.RawArg, job.Arg)
 	return
-}
-
-// String implements fmt.Stringer interface.
-func (job *Job) String() string {
-	return fmt.Sprintf("ID:%d, Type:%s, State:%s, SchemaState:%s, SchemaID:%d, CollectionID:%d, ArgLen:%d, start time: %v, Err:%v, ErrCount:%d",
-		job.ID, job.Type, job.State, job.SchemaState, job.SchemaID, job.CollectionID, len(job.Args), job.StartTS, job.Error, job.ErrorCount)
 }

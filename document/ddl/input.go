@@ -1,5 +1,7 @@
 package ddl
 
+import "github.com/zhiqiangxu/mondis/document/model"
+
 // CreateSchemaInput for CreateSchema
 type CreateSchemaInput struct {
 	DB          string
@@ -46,4 +48,21 @@ type IndexInfo struct {
 	Columns []string
 	Unique  bool
 	Primary bool
+}
+
+// ToModel converts IndexInfo to *model.IndexInfo
+func (ii *IndexInfo) ToModel() *model.IndexInfo {
+	mii := &model.IndexInfo{
+		Name:    ii.Name,
+		Unique:  ii.Unique,
+		Primary: ii.Primary,
+	}
+	if len(ii.Columns) > 0 {
+		mii.Columns = make([]string, len(ii.Columns))
+		for i, column := range ii.Columns {
+			mii.Columns[i] = column
+		}
+	}
+
+	return mii
 }

@@ -5,22 +5,30 @@ import (
 	"sync"
 
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/document/ddl"
+	"github.com/zhiqiangxu/mondis/document/meta"
+	"github.com/zhiqiangxu/mondis/document/model"
+	"github.com/zhiqiangxu/mondis/document/schema"
 )
 
 // Domain represents a storage space
 type Domain struct {
-	kvdb mondis.KVDB
-	mu   struct {
+	handle *schema.Handle
+	kvdb   mondis.KVDB
+	mu     struct {
 		sync.RWMutex
 		dbs map[string]*DB
 	}
-	ddl *DDL
+	ddl *ddl.DDL
 }
 
 // NewDomain is ctor for Domain
 func NewDomain(kvdb mondis.KVDB) *Domain {
-	do := &Domain{kvdb: kvdb}
-	do.ddl = newDDL(do)
+	do := &Domain{
+		handle: schema.NewHandle(),
+		kvdb:   kvdb,
+		ddl:    ddl.New(kvdb, ddl.Options{}),
+	}
 	return do
 }
 
@@ -45,6 +53,15 @@ func (do *Domain) DB(name string) (db *DB, err error) {
 }
 
 // DDL getter
-func (do *Domain) DDL() *DDL {
+func (do *Domain) DDL() *ddl.DDL {
 	return do.ddl
+}
+
+func (do *Domain) newCollection(dbID int64, info model.CollectionInfo) (collection *Collection, err error) {
+	didSequence, err := meta.NewDocIDSequence(do.kvdb, dbID, info.ID, 0)
+	if err != nil {
+		return
+	}
+	collection = &Collection{didSequence: didSequence}
+	return
 }

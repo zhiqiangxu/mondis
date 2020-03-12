@@ -141,6 +141,17 @@ func (m *Meta) GenGlobalID() (int64, error) {
 	return m.txn.Inc(globalIDKey, 1)
 }
 
+// GenGlobalIDs for generating multiple ids in (start, end]
+func (m *Meta) GenGlobalIDs(n int) (start, end int64, err error) {
+	n64 := int64(n)
+	end, err = m.txn.Inc(globalIDKey, n64)
+	if err != nil {
+		return
+	}
+	start = end - n64
+	return
+}
+
 // GetSchemaVersion gets current global schema version.
 func (m *Meta) GetSchemaVersion() (int64, error) {
 	return m.txn.GetInt64(schemaVersionKey)

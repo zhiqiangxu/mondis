@@ -7,8 +7,8 @@ import (
 
 const defaultDIDBandWidth = 1000
 
-// NewDocumentIDSequence creates a sequence for collection documents
-func NewDocumentIDSequence(kvdb mondis.KVDB, bandwidth, dbID, cid int64) (*sequence.Hash, error) {
+// NewDocIDSequence creates a sequence for collection documents
+func NewDocIDSequence(kvdb mondis.KVDB, dbID, cid, bandwidth int64) (*sequence.Hash, error) {
 	if bandwidth <= 0 {
 		bandwidth = defaultDIDBandWidth
 	}
