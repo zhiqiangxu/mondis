@@ -48,15 +48,9 @@ type (
 	// SchemaDiff contains the schema modification at a particular schema version.
 	// It is used to reduce schema reload cost.
 	SchemaDiff struct {
-		Version  int64      `json:"version"`
-		Type     ActionType `json:"type"`
-		SchemaID int64      `json:"schema_id"`
-		TableID  int64      `json:"table_id"`
-
-		// OldTableID is the table ID before truncate, only used by truncate table DDL.
-		OldTableID int64 `json:"old_table_id"`
-		// OldSchemaID is the schema ID before rename table, only used by rename table DDL.
-		OldSchemaID int64 `json:"old_schema_id"`
+		Version       int64      `json:"version"`
+		Type          ActionType `json:"type"`
+		CollectionIDs []int64
 	}
 )
 
@@ -139,9 +133,8 @@ func (s JobState) String() string {
 }
 
 // Encode encodes job with json format.
-// updateRawArg is used to determine whether to update the raw args.
-func (job *Job) Encode(updateRawArg bool) (b []byte, err error) {
-	if updateRawArg {
+func (job *Job) Encode() (b []byte, err error) {
+	if len(job.RawArg) == 0 {
 		job.RawArg, err = json.Marshal(job.Arg)
 		if err != nil {
 			return
@@ -162,7 +155,19 @@ func (job *Job) Decode(b []byte) (err error) {
 
 // DecodeArg decodes job arg.
 func (job *Job) DecodeArg(arg interface{}) (err error) {
+	err = json.Unmarshal(job.RawArg, arg)
 	job.Arg = arg
-	err = json.Unmarshal(job.RawArg, job.Arg)
 	return
+}
+
+// FinishTableJob is called when a job is finished.
+func (job *Job) FinishTableJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, collectionInfo *CollectionInfo) {
+	job.State = jobState
+	job.SchemaState = schemaState
+}
+
+// FinishDBJob is called when a job is finished.
+func (job *Job) FinishDBJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, dbInfo *DBInfo) {
+	job.State = jobState
+	job.SchemaState = schemaState
 }

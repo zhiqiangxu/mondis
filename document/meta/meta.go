@@ -37,7 +37,6 @@ var (
 //		db:2 -> db meta data []byte
 //	}
 //	db:1 -> {
-//		collectionID -> int64
 //		collectionInfo:1 -> collection meta data []byte
 //		collectionInfo:2 -> collection meta data []byte
 //		didSequence:1 -> int64
@@ -52,7 +51,6 @@ var (
 	globalIDKey          = []byte("globalID")
 	dbsKey               = []byte("dbs")
 	dbPrefix             = []byte("db")
-	collectionIDKey      = []byte("collectionID")
 	collectionInfoPrefix = []byte("collectionInfo")
 	didSequencePrefix    = []byte("didSequence")
 )
@@ -192,44 +190,6 @@ func (m *Meta) UpdateDatabase(dbInfo *model.DBInfo) (err error) {
 	}
 
 	return m.txn.HSet(dbsKey, dbKey, data)
-}
-
-// GetCollectionID returns the current cid of dbID
-func (m *Meta) GetCollectionID(dbID int64) (cid int64, err error) {
-	// Check if db exists.
-	dbKey := dbKeyByID(dbID)
-	if err = m.checkDBExists(dbKey); err != nil {
-		return
-	}
-
-	cid, err = m.txn.HGetInt64(dbKey, collectionIDKey)
-	return
-}
-
-// GenCollectionID generates the next cid for dbID
-func (m *Meta) GenCollectionID(dbID int64) (cid int64, err error) {
-	// Check if db exists.
-	dbKey := dbKeyByID(dbID)
-	if err = m.checkDBExists(dbKey); err != nil {
-		return
-	}
-
-	cid, err = m.txn.HInc(dbKey, collectionIDKey, 1)
-	return
-}
-
-// GenCollectionIDs is batch version of GenCollectionID
-// returns (cidStart, cidEnd]
-func (m *Meta) GenCollectionIDs(dbID, n int64) (cidStart, cidEnd int64, err error) {
-	// Check if db exists.
-	dbKey := dbKeyByID(dbID)
-	if err = m.checkDBExists(dbKey); err != nil {
-		return
-	}
-
-	cidEnd, err = m.txn.HInc(dbKey, collectionIDKey, n)
-	cidStart = cidEnd - n
-	return
 }
 
 // CreateCollection creates a collection with CollectoinInfo in database.
@@ -477,7 +437,7 @@ var (
 )
 
 func (m *Meta) enQueueDDLJob(key []byte, job *model.Job) (err error) {
-	b, err := job.Encode(true)
+	b, err := job.Encode()
 	if err == nil {
 		err = m.txn.RPush(key, b)
 	}
@@ -542,9 +502,8 @@ func (m *Meta) GetDDLJobByIdx(index int64, jobListKeys ...JobListKeyType) (job *
 }
 
 // updateDDLJob updates the DDL job with index and key.
-// updateRawArgs is used to determine whether to update the raw args when encode the job.
-func (m *Meta) updateDDLJob(index int64, job *model.Job, key []byte, updateRawArgs bool) (err error) {
-	b, err := job.Encode(updateRawArgs)
+func (m *Meta) updateDDLJob(index int64, job *model.Job, key []byte) (err error) {
+	b, err := job.Encode()
 	if err == nil {
 		err = m.txn.LSet(key, index, b)
 		if err == kv.ErrKeyNotFound {
@@ -557,13 +516,13 @@ func (m *Meta) updateDDLJob(index int64, job *model.Job, key []byte, updateRawAr
 
 // UpdateDDLJob updates the DDL job with index.
 // updateRawArgs is used to determine whether to update the raw args when encode the job.
-func (m *Meta) UpdateDDLJob(index int64, job *model.Job, updateRawArgs bool, jobListKeys ...JobListKeyType) (err error) {
+func (m *Meta) UpdateDDLJob(index int64, job *model.Job, jobListKeys ...JobListKeyType) (err error) {
 	listKey := m.jobListKey
 	if len(jobListKeys) != 0 {
 		listKey = jobListKeys[0]
 	}
 
-	err = m.updateDDLJob(index, job, listKey, updateRawArgs)
+	err = m.updateDDLJob(index, job, listKey)
 	return
 }
 
@@ -606,8 +565,8 @@ func (m *Meta) historyJobIDKey(id int64) []byte {
 }
 
 // AddHistoryDDLJob adds DDL job to history.
-func (m *Meta) AddHistoryDDLJob(job *model.Job, updateRawArgs bool) (err error) {
-	b, err := job.Encode(updateRawArgs)
+func (m *Meta) AddHistoryDDLJob(job *model.Job) (err error) {
+	b, err := job.Encode()
 	if err == nil {
 		err = m.txn.HSet(ddlJobHistoryKey, m.historyJobIDKey(job.ID), b)
 	}

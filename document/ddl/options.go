@@ -2,9 +2,12 @@ package ddl
 
 import (
 	"time"
+
+	"github.com/zhiqiangxu/mondis/document/schema"
 )
 
 // Options for ddl
 type Options struct {
-	Lease time.Duration
+	MetaCacheHandle *schema.Handle
+	Lease           time.Duration
 }
