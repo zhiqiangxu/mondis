@@ -10,7 +10,7 @@ import (
 type Collection struct {
 	mu struct {
 		sync.RWMutex
-		indexes map[string]*Index
+		indices map[string]*Index
 	}
 	cid         int64
 	didSequence *sequence.Hash
@@ -19,7 +19,7 @@ type Collection struct {
 // Index for find an index by name
 func (collection *Collection) Index(name string) (idx *Index, err error) {
 	collection.mu.RLock()
-	idx = collection.mu.indexes[name]
+	idx = collection.mu.indices[name]
 	collection.mu.RUnlock()
 
 	if idx == nil {
