@@ -1,6 +1,8 @@
 package ddl
 
 import (
+	"context"
+
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
@@ -9,8 +11,8 @@ import (
 	"github.com/zhiqiangxu/util/osc"
 )
 
-func (d *DDL) onCreateSchema(input CreateSchemaInput) (err error) {
-	return d.lockAndUpdateMetaCache(func() (metacache *schema.MetaCache, err error) {
+func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err error) {
+	return d.lockAndUpdateMetaCache(ctx, func() (metacache *schema.MetaCache, err error) {
 		n := 2 + len(input.Collections)
 		err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
 			m := meta.NewMeta(txn)
@@ -101,8 +103,8 @@ func (d *DDL) updateSchemaVersion(m *meta.Meta, job *model.Job) (schemaVersion i
 	return
 }
 
-func (d *DDL) lockAndUpdateMetaCache(f func() (*schema.MetaCache, error)) error {
-	return d.options.MetaCacheHandle.Update(f)
+func (d *DDL) lockAndUpdateMetaCache(ctx context.Context, f func() (*schema.MetaCache, error)) error {
+	return d.options.MetaCacheHandle.Update(ctx, f)
 }
 
 func job2CollectionIDs(job *model.Job) (collectionIDs []int64) {

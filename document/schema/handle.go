@@ -1,19 +1,22 @@
 package schema
 
 import (
-	"sync"
+	"context"
 	"sync/atomic"
+
+	"github.com/zhiqiangxu/util/mutex"
 )
 
 // Handle handles schema meta cache, including getting and setting.
 type Handle struct {
-	mu    sync.RWMutex
+	mu    mutex.CRWMutex
 	value atomic.Value
 }
 
 // NewHandle is ctor for Handle
 func NewHandle() *Handle {
 	h := &Handle{}
+	h.mu.Init()
 	return h
 }
 
@@ -27,17 +30,23 @@ func (h *Handle) GetSnap() *MetaCache {
 
 // GetLatest gets the latest schema meta cache.
 // this is called when txn commits
-func (h *Handle) GetLatest() *MetaCache {
-	h.mu.RLock()
+func (h *Handle) GetLatest(ctx context.Context) (cache *MetaCache, err error) {
+	err = h.mu.RLock(ctx)
+	if err != nil {
+		return
+	}
 	v := h.value.Load()
 	h.mu.RUnlock()
-	cache, _ := v.(*MetaCache)
-	return cache
+	cache, _ = v.(*MetaCache)
+	return
 }
 
 // Update for update schema meta cache into Handle
-func (h *Handle) Update(f func() (*MetaCache, error)) (err error) {
-	h.mu.Lock()
+func (h *Handle) Update(ctx context.Context, f func() (*MetaCache, error)) (err error) {
+	err = h.mu.Lock(ctx)
+	if err != nil {
+		return
+	}
 	defer h.mu.Unlock()
 
 	cache, err := f()

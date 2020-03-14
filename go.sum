@@ -172,6 +172,8 @@ github.com/zhiqiangxu/util v0.0.0-20200304053010-4bc34535d5f7 h1:oonqhOKDKIIiHVQ
 github.com/zhiqiangxu/util v0.0.0-20200304053010-4bc34535d5f7/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
 github.com/zhiqiangxu/util v0.0.0-20200311034136-75b010b4c3cb h1:WPUNDu8Zo4CzJmvSN6x2din4IOGcv6G3sKBQiPidzmQ=
 github.com/zhiqiangxu/util v0.0.0-20200311034136-75b010b4c3cb/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
+github.com/zhiqiangxu/util v0.0.0-20200314033308-45133f598ff4 h1:FRnvtcb0uxdw0BLE14cbJmw1gZvWEC0JGPraJAdbuDw=
+github.com/zhiqiangxu/util v0.0.0-20200314033308-45133f598ff4/go.mod h1:ybdeTQWwqgpCFu/UkK7jMmZRWzoQJHgIBbbxZq8wtz4=
 go.mongodb.org/mongo-driver v1.3.0 h1:ew6uUIeJOo+qdUUv7LxFCUhtWmVv7ZV/Xuy4FAUsw2E=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
 go.uber.org/atomic v1.5.0 h1:OI5t8sDa1Or+q8AeE+yKeB/SDYioSHAgcVljj9JIETY=
@@ -212,6 +214,7 @@ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190412183630-56d357773e84/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.0.0-20190423024810-112230192c58 h1:8gQV6CLnAEikrhgkHFbMAEhagSSnXWGV915qUMm9mrU=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=

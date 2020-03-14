@@ -1,6 +1,7 @@
 package ddl
 
 import (
+	"context"
 	"errors"
 
 	"github.com/zhiqiangxu/mondis"
@@ -27,8 +28,8 @@ func New(kvdb mondis.KVDB, options Options) *DDL {
 }
 
 // CreateSchema for create db
-func (d *DDL) CreateSchema(input CreateSchemaInput) error {
-	return d.onCreateSchema(input)
+func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) error {
+	return d.onCreateSchema(ctx, input)
 }
 
 // DropSchema for drop db
