@@ -132,6 +132,44 @@ func (s JobState) String() string {
 	}
 }
 
+// Clone DBInfo
+func (db *DBInfo) Clone() *DBInfo {
+	clone := *db
+	clone.Collections = make(map[string]*CollectionInfo)
+	clone.CollectionOrder = make([]string, len(db.CollectionOrder))
+	for cn, ci := range db.Collections {
+		clone.Collections[cn] = ci.Clone()
+	}
+	for i, cn := range db.CollectionOrder {
+		clone.CollectionOrder[i] = cn
+	}
+	return &clone
+}
+
+// Clone CollectionInfo
+func (c *CollectionInfo) Clone() *CollectionInfo {
+	clone := *c
+	clone.Indices = make(map[string]*IndexInfo)
+	clone.IndexOrder = make([]string, len(c.IndexOrder))
+	for in, ii := range c.Indices {
+		clone.Indices[in] = ii.Clone()
+	}
+	for i, in := range c.IndexOrder {
+		clone.IndexOrder[i] = in
+	}
+	return &clone
+}
+
+// Clone IndexInfo
+func (ii *IndexInfo) Clone() *IndexInfo {
+	clone := *ii
+	clone.Columns = make([]string, len(ii.Columns))
+	for i, name := range ii.Columns {
+		clone.Columns[i] = name
+	}
+	return &clone
+}
+
 // Encode encodes job with json format.
 func (job *Job) Encode() (b []byte, err error) {
 	if len(job.RawArg) == 0 {
@@ -160,13 +198,13 @@ func (job *Job) DecodeArg(arg interface{}) (err error) {
 	return
 }
 
-// FinishTableJob is called when a job is finished.
-func (job *Job) FinishTableJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, collectionInfo *CollectionInfo) {
+// FinishCollectionJob is called when a collection job is finished.
+func (job *Job) FinishCollectionJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, collectionInfo *CollectionInfo) {
 	job.State = jobState
 	job.SchemaState = schemaState
 }
 
-// FinishDBJob is called when a job is finished.
+// FinishDBJob is called when a db job is finished.
 func (job *Job) FinishDBJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, dbInfo *DBInfo) {
 	job.State = jobState
 	job.SchemaState = schemaState

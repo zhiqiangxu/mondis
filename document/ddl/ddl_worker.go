@@ -19,6 +19,10 @@ func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err 
 
 	return d.lockAndUpdateMetaCache(ctx, func() (metacache *schema.MetaCache, err error) {
 		n := 2 + len(input.Collections)
+		var (
+			dbInfo        *model.DBInfo
+			schemaVersion int64
+		)
 		err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
 			m := meta.NewMeta(txn)
 			queueLength, err := m.DDLJobQueueLen()
@@ -36,7 +40,7 @@ func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err 
 
 			schemaID := start + 1
 			nextID := schemaID
-			dbInfo := &model.DBInfo{
+			dbInfo = &model.DBInfo{
 				ID:          schemaID,
 				Name:        input.DB,
 				Collections: make(map[string]*model.CollectionInfo),
@@ -76,7 +80,7 @@ func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err 
 				Arg:  dbInfo,
 			}
 
-			schemaVersion, err := d.updateSchemaVersion(m, job)
+			schemaVersion, err = d.updateSchemaVersion(m, job)
 			if err != nil {
 				return
 			}
@@ -86,6 +90,10 @@ func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err 
 
 			return
 		})
+
+		if err == nil {
+			metacache, err = d.options.MetaCacheHandle.GetSnap().AddSchema(schemaVersion, dbInfo)
+		}
 		return
 	})
 
