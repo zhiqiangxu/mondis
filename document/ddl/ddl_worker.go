@@ -12,6 +12,11 @@ import (
 )
 
 func (d *DDL) onCreateSchema(ctx context.Context, input CreateSchemaInput) (err error) {
+	err = input.Validate()
+	if err != nil {
+		return
+	}
+
 	return d.lockAndUpdateMetaCache(ctx, func() (metacache *schema.MetaCache, err error) {
 		n := 2 + len(input.Collections)
 		err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
