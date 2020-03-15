@@ -198,6 +198,32 @@ func (job *Job) DecodeArg(arg interface{}) (err error) {
 	return
 }
 
+// IsSynced returns whether the DDL modification is synced among all servers.
+func (job *Job) IsSynced() bool {
+	return job.State == JobStateSynced
+}
+
+// IsDone returns whether job is done.
+func (job *Job) IsDone() bool {
+	return job.State == JobStateDone
+}
+
+// IsCancelled returns whether job is canceled.
+func (job *Job) IsCancelled() bool {
+	return job.State == JobStateCancelled
+}
+
+// IsFinished returns whether job is finished or not.
+// If the job state is Done or Cancelled, it is finished.
+func (job *Job) IsFinished() bool {
+	return job.State == JobStateDone || job.State == JobStateRollbackDone || job.State == JobStateCancelled
+}
+
+// IsRollbackDone returns whether the job is rolled back or not.
+func (job *Job) IsRollbackDone() bool {
+	return job.State == JobStateRollbackDone
+}
+
 // FinishCollectionJob is called when a collection job is finished.
 func (job *Job) FinishCollectionJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, collectionInfo *CollectionInfo) {
 	job.State = jobState

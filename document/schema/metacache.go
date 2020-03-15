@@ -12,7 +12,13 @@ type MetaCache struct {
 	dbs     map[string]*model.DBInfo
 }
 
-func (c *MetaCache) clone() *MetaCache {
+// Version getter
+func (c *MetaCache) Version() int64 {
+	return c.version
+}
+
+// Clone for deep copy
+func (c *MetaCache) Clone() *MetaCache {
 	if c == nil {
 		return &MetaCache{}
 	}
@@ -23,14 +29,17 @@ func (c *MetaCache) clone() *MetaCache {
 	return clone
 }
 
-// AddSchema to MetaCache, only called on a clone
-func (c *MetaCache) AddSchema(version int64, dbInfo *model.DBInfo) (nc *MetaCache, err error) {
+// ApplyDiff for calculating MetaCache by SchemaDiff
+func (c *MetaCache) ApplyDiff(diff *model.SchemaDiff) {
+	return
+}
+
+func (c *MetaCache) addSchema(version int64, dbInfo *model.DBInfo) (nc *MetaCache, err error) {
 	if c.dbs[dbInfo.Name] != nil {
 		err = fmt.Errorf("db %s exists in meta cache", dbInfo.Name)
 		return
 	}
 
-	nc = c.clone()
 	nc.version = version
 
 	nc.dbs[dbInfo.Name] = dbInfo

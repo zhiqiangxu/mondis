@@ -1,38 +1,44 @@
 package ddl
 
 import (
-	"context"
 	"errors"
 
 	"github.com/zhiqiangxu/mondis"
 )
 
 const (
-	maxDDLJobsInQueue = 100
+	maxJobsInQueue = 100
 )
 
 var (
-	// ErrDDLJobsInQueueExceeded used by DDL
-	ErrDDLJobsInQueueExceeded = errors.New("jobs in queue exceeded")
+	// ErrJobsInQueueExceeded used by DDL
+	ErrJobsInQueueExceeded = errors.New("ddl jobs in queue exceeded")
 )
 
 // DDL is responsible for updating schema in data store and maintaining in-memory schema cache.
 type DDL struct {
 	kvdb    mondis.KVDB
 	options Options
+	workers map[workerType]*worker
 }
 
 // New is ctor for DDL
 func New(kvdb mondis.KVDB, options Options) *DDL {
-	return &DDL{kvdb: kvdb, options: options}
+	ddl := &DDL{
+		kvdb:    kvdb,
+		options: options,
+		workers: make(map[workerType]*worker),
+	}
+
+	ddl.start()
+
+	return ddl
 }
 
-// CreateSchema for create db
-func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) error {
-	return d.onCreateSchema(ctx, input)
-}
+func (d *DDL) start() {
+	d.workers[defaultWorkerType] = newWorker(defaultWorkerType, d)
 
-// DropSchema for drop db
-func (d *DDL) DropSchema() (err error) {
-	return
+	for _, w := range d.workers {
+		go w.start()
+	}
 }

@@ -1,6 +1,8 @@
 package util
 
 import (
+	"time"
+
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/kv"
 )
@@ -52,4 +54,12 @@ func RunInNewTxn(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error) (err error)
 	err = f(txn)
 
 	return
+}
+
+// ChooseTime for choosing between base and max
+func ChooseTime(base, max time.Duration) time.Duration {
+	if base == 0 || base > max {
+		return max
+	}
+	return base
 }

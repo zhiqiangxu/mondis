@@ -457,7 +457,7 @@ func (m *Meta) EnQueueDDLJob(job *model.Job, jobListKeys ...JobListKeyType) erro
 func (m *Meta) deQueueDDLJob(key []byte) (job *model.Job, err error) {
 	value, err := m.txn.LPop(key)
 	if err == kv.ErrKeyNotFound {
-		err = ErrJobNotExists
+		err = nil
 		return
 	}
 	if err != nil {
@@ -477,7 +477,7 @@ func (m *Meta) DeQueueDDLJob() (*model.Job, error) {
 func (m *Meta) getDDLJob(key []byte, index int64) (job *model.Job, err error) {
 	value, err := m.txn.LIndex(key, index)
 	if err == kv.ErrKeyNotFound {
-		err = ErrJobNotExists
+		err = nil
 		return
 	}
 	if err != nil {
@@ -577,7 +577,7 @@ func (m *Meta) AddHistoryDDLJob(job *model.Job) (err error) {
 func (m *Meta) GetHistoryDDLJob(id int64) (job *model.Job, err error) {
 	value, err := m.txn.HGet(ddlJobHistoryKey, m.historyJobIDKey(id))
 	if err == kv.ErrKeyNotFound {
-		err = ErrJobNotExists
+		err = nil
 		return
 	}
 	if err != nil {
