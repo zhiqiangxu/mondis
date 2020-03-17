@@ -2,17 +2,16 @@ package domain
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/config"
+	"github.com/zhiqiangxu/mondis/document/db"
 	"github.com/zhiqiangxu/mondis/document/ddl"
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
-	"github.com/zhiqiangxu/mondis/document/txn"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
 )
@@ -45,11 +44,6 @@ func (do *Domain) init() {
 	callback := ddl.Callback{OnChanged: do.onChange}
 	do.ddl = ddl.New(do.kvdb, ddl.Options{Callback: callback})
 	go do.reloadInLoop()
-}
-
-// Txn to grab a Txn
-func (do *Domain) Txn(update bool) *txn.Txn {
-	return txn.NewTxn(do.handle.Get().Version(), update, do.kvdb)
 }
 
 func (do *Domain) onChange(err error) {
@@ -183,31 +177,10 @@ func (do *Domain) fetchAllDBs(m *meta.Meta) (dbInfos []*model.DBInfo, err error)
 	return
 }
 
-var (
-	// ErrDBNotExists used by Domain
-	ErrDBNotExists = errors.New("db not exists")
-	// ErrCollectionNotExists used by Domain
-	ErrCollectionNotExists = errors.New("collection not exists")
-	// ErrIndexNotExists used by Domain
-	ErrIndexNotExists = errors.New("index not exists")
-)
-
 // DB for find a db by name
-func (do *Domain) DB(name string) (db *DB, err error) {
-	schemaCache := do.handle.Get()
+func (do *Domain) DB(name string) (db *db.DB, err error) {
 
-	if schemaCache == nil {
-		err = ErrDBNotExists
-		return
-	}
-
-	exists := schemaCache.CheckDBExists(name)
-	if !exists {
-		err = ErrDBNotExists
-		return
-	}
-
-	db = newDB(name, do)
+	db = db.NewDB(name, do.kvdb, do.handle)
 	return
 }
 
