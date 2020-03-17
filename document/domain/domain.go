@@ -19,12 +19,8 @@ import (
 
 // Domain represents a storage space
 type Domain struct {
-	handle *schema.Handle
-	kvdb   mondis.KVDB
-	mu     struct {
-		sync.RWMutex
-		dbs map[string]*DB
-	}
+	handle   *schema.Handle
+	kvdb     mondis.KVDB
 	ddl      *ddl.DDL
 	reloadMu sync.Mutex
 }
@@ -198,25 +194,24 @@ var (
 
 // DB for find a db by name
 func (do *Domain) DB(name string) (db *DB, err error) {
-	do.mu.RLock()
-	db = do.mu.dbs[name]
-	do.mu.RUnlock()
-	if db == nil {
+	schemaCache := do.handle.Get()
+
+	if schemaCache == nil {
 		err = ErrDBNotExists
+		return
 	}
+
+	exists := schemaCache.CheckDBExists(name)
+	if !exists {
+		err = ErrDBNotExists
+		return
+	}
+
+	db = newDB(name, do)
 	return
 }
 
 // DDL getter
 func (do *Domain) DDL() *ddl.DDL {
 	return do.ddl
-}
-
-func (do *Domain) newCollection(dbID int64, info model.CollectionInfo) (collection *Collection, err error) {
-	didSequence, err := meta.NewDocIDSequence(do.kvdb, dbID, info.ID, 0)
-	if err != nil {
-		return
-	}
-	collection = &Collection{didSequence: didSequence}
-	return
 }

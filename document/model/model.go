@@ -133,6 +133,16 @@ func (s JobState) String() string {
 	}
 }
 
+// CollectionExists check whether collection exists
+func (db *DBInfo) CollectionExists(collectionName string) bool {
+	return db.Collections[collectionName] != nil
+}
+
+// CollectionInfo finds CollectionInfo by name
+func (db *DBInfo) CollectionInfo(collectionName string) *CollectionInfo {
+	return db.Collections[collectionName]
+}
+
 // Clone DBInfo
 func (db *DBInfo) Clone() *DBInfo {
 	clone := *db
@@ -159,6 +169,11 @@ func (c *CollectionInfo) Clone() *CollectionInfo {
 		clone.IndexOrder[i] = in
 	}
 	return &clone
+}
+
+// IndexExists checks whether index exists
+func (c *CollectionInfo) IndexExists(indexName string) bool {
+	return c.Indices[indexName] != nil
 }
 
 // Clone IndexInfo

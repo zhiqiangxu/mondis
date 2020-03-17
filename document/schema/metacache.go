@@ -32,6 +32,33 @@ func (c *MetaCache) Version() int64 {
 	return c.version
 }
 
+// CheckDBExists checks whether db exists
+func (c *MetaCache) CheckDBExists(dbName string) bool {
+	return c.dbs[dbName] != nil
+}
+
+// CheckCollectionExists checks whether collection exists
+func (c *MetaCache) CheckCollectionExists(dbName, collectionName string) bool {
+	dbInfo := c.dbs[dbName]
+	return dbInfo != nil && dbInfo.CollectionExists(collectionName)
+}
+
+// CheckIndexExists checks whether index exists
+func (c *MetaCache) CheckIndexExists(dbName, collectionName, indexName string) (exists bool) {
+	dbInfo := c.dbs[dbName]
+	if dbInfo == nil {
+		return
+	}
+
+	ci := dbInfo.CollectionInfo(collectionName)
+	if ci == nil {
+		return
+	}
+
+	exists = ci.IndexExists(indexName)
+	return
+}
+
 // Clone for deep copy
 func (c *MetaCache) Clone() *MetaCache {
 	if c == nil {

@@ -1,23 +1,29 @@
 package domain
 
-import "sync"
-
 // DB model
 type DB struct {
-	id int64
-	mu struct {
-		sync.RWMutex
-		collections map[string]*Collection
-	}
+	Name string
+	do   *Domain
+}
+
+func newDB(name string, do *Domain) *DB {
+	return &DB{Name: name, do: do}
 }
 
 // Collection for find a collection by name
 func (db *DB) Collection(name string) (collection *Collection, err error) {
-	db.mu.RLock()
-	collection = db.mu.collections[name]
-	db.mu.RUnlock()
-	if collection == nil {
+
+	schemaCache := db.do.handle.Get()
+	if schemaCache == nil {
 		err = ErrCollectionNotExists
+		return
 	}
+
+	if !schemaCache.CheckCollectionExists(db.Name, name) {
+		err = ErrCollectionNotExists
+		return
+	}
+
+	collection = newCollection(db.Name, name, db.do)
 	return
 }
