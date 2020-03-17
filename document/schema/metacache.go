@@ -37,6 +37,21 @@ func (c *MetaCache) CheckDBExists(dbName string) bool {
 	return c != nil && c.dbs[dbName] != nil
 }
 
+// CollectionInfo retrieves the collection info by name
+func (c *MetaCache) CollectionInfo(dbName, collectionName string) (collectionInfo *model.CollectionInfo) {
+	if c == nil {
+		return
+	}
+
+	dbInfo := c.dbs[dbName]
+	if dbInfo == nil {
+		return
+	}
+
+	collectionInfo = dbInfo.CollectionInfo(collectionName)
+	return
+}
+
 // CheckCollectionExists checks whether collection exists
 func (c *MetaCache) CheckCollectionExists(dbName, collectionName string) bool {
 	if c == nil {

@@ -55,7 +55,7 @@ func (txn *Txn) Commit() (err error) {
 }
 
 // UpdatedCollections for storing updated collections before commit
-func (txn *Txn) UpdatedCollections(collectionIDs []int64) {
+func (txn *Txn) UpdatedCollections(collectionIDs ...int64) {
 	if txn.updatedCollections == nil {
 		txn.updatedCollections = make(map[int64]struct{})
 	}

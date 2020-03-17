@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
 	"github.com/zhiqiangxu/mondis/document/txn"
 	"go.mongodb.org/mongo-driver/bson"
@@ -31,24 +32,25 @@ func (collection *Collection) Index(name string) (idx *Index, err error) {
 	return
 }
 
-func (collection *Collection) checkExists() (err error) {
-	if !collection.handle.Get().CheckCollectionExists(collection.dbName, collection.collectionName) {
-		err = ErrCollectionNotExists
-	}
+func (collection *Collection) info() *model.CollectionInfo {
 
-	return
+	return collection.handle.Get().CollectionInfo(collection.dbName, collection.collectionName)
+
 }
 
 // InsertOne for insert a document into collection
 func (collection *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 
-	err = collection.checkExists()
-	if err != nil {
+	collectionInfo := collection.info()
+	if collectionInfo == nil {
+		err = ErrCollectionNotExists
 		return
 	}
 
 	insertFunc := func(t *txn.Txn) error {
 		// did, err = t.InsertOne(collection.dbName, collection.collectionName, doc)
+
+		t.UpdatedCollections(collectionInfo.ID)
 		return err
 	}
 	if t != nil {
