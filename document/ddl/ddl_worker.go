@@ -195,6 +195,8 @@ func (d *DDL) updateSchemaVersion(m *meta.Meta, job *model.Job) (schemaVersion i
 		Version:       schemaVersion,
 		Type:          job.Type,
 		CollectionIDs: job2CollectionIDs(job),
+		Arg:           job.Arg,
+		RawArg:        job.RawArg,
 	}
 
 	err = m.SetSchemaDiff(diff)

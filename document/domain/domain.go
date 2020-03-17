@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
-	"github.com/zhiqiangxu/mondis/util"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
 )
@@ -72,9 +72,12 @@ func (do *Domain) mustReload() {
 
 func (do *Domain) reloadInLoop() {
 	conf := config.Load()
+	if conf.Lease == 0 {
+		return
+	}
 	// Lease renewal can run at any frequency.
 	// Use lease/2 here as recommend by paper.
-	ticker := time.NewTicker(util.ChooseTime(conf.Lease/2, conf.ReloadMaxTickInterval))
+	ticker := time.NewTicker(conf.Lease / 2)
 	defer ticker.Stop()
 
 	for {
@@ -93,13 +96,15 @@ func (do *Domain) reload() (err error) {
 	do.reloadMu.Lock()
 	defer do.reloadMu.Unlock()
 
+	err = do.reloadSchema()
 	return
 }
 
-func (do *Domain) loadSchema() (err error) {
+func (do *Domain) reloadSchema() (err error) {
 	var schemaVersionCache int64
-	if schemaCache := do.handle.Get(); schemaCache != nil {
-		schemaVersionCache = schemaCache.Version()
+	metaCache := do.handle.Get()
+	if metaCache != nil {
+		schemaVersionCache = metaCache.Version()
 	}
 
 	txn := do.kvdb.NewTransaction(false)
@@ -115,6 +120,64 @@ func (do *Domain) loadSchema() (err error) {
 		return
 	}
 
+	ok, diffs, err := do.tryLoadSchemaDiff(m, schemaVersionCache, schemaVersionInKV)
+	if err != nil {
+		return
+	}
+
+	if ok {
+		newMetaCache := metaCache.Clone()
+		err = newMetaCache.ApplyDiffs(diffs)
+		if err != nil {
+			return
+		}
+
+		err = do.handle.Update(context.Background(), newMetaCache)
+		return
+	}
+
+	dbInfos, err := do.fetchAllDBs(m)
+	if err != nil {
+		return
+	}
+
+	newMetaCache := schema.NewMetaCache(schemaVersionInKV, dbInfos)
+	err = do.handle.Update(context.Background(), newMetaCache)
+
+	return
+}
+
+const (
+	maxNumberOfDiffsToLoad = 100
+)
+
+func (do *Domain) tryLoadSchemaDiff(m *meta.Meta, schemaVersionCache, schemaVersionInKV int64) (ok bool, diffs []*model.SchemaDiff, err error) {
+
+	if schemaVersionCache == 0 || schemaVersionInKV-schemaVersionCache > maxNumberOfDiffsToLoad {
+		return
+	}
+
+	diffs = make([]*model.SchemaDiff, 0, schemaVersionInKV-schemaVersionCache)
+	var diff *model.SchemaDiff
+	for schemaVersionCache < schemaVersionInKV {
+		schemaVersionCache++
+		diff, err = m.GetSchemaDiff(schemaVersionCache)
+		if err != nil {
+			return
+		}
+		if diff == nil {
+			return
+		}
+		diffs = append(diffs, diff)
+	}
+
+	ok = true
+	return
+}
+
+func (do *Domain) fetchAllDBs(m *meta.Meta) (dbInfos []*model.DBInfo, err error) {
+
+	dbInfos, err = m.ListDatabases()
 	return
 }
 

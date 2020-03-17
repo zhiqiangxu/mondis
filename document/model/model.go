@@ -46,11 +46,12 @@ type (
 		DependencyID int64
 	}
 	// SchemaDiff contains the schema modification at a particular schema version.
-	// It is used to reduce schema reload cost.
 	SchemaDiff struct {
 		Version       int64      `json:"version"`
 		Type          ActionType `json:"type"`
 		CollectionIDs []int64
+		Arg           interface{} `json:"-"`
+		RawArg        json.RawMessage
 	}
 )
 
@@ -234,4 +235,31 @@ func (job *Job) FinishCollectionJob(jobState JobState, schemaState osc.SchemaSta
 func (job *Job) FinishDBJob(jobState JobState, schemaState osc.SchemaState, schemaVersion int64, dbInfo *DBInfo) {
 	job.State = jobState
 	job.SchemaState = schemaState
+}
+
+// Encode SchemaDiff
+func (sd *SchemaDiff) Encode() (b []byte, err error) {
+	if len(sd.RawArg) == 0 {
+		sd.RawArg, err = json.Marshal(sd.Arg)
+		if err != nil {
+			return
+		}
+	}
+
+	b, err = json.Marshal(sd)
+	return
+}
+
+// Decode decodes schema diff from the json buffer, we must use DecodeArg later to
+// decode special arg for this schema diff.
+func (sd *SchemaDiff) Decode(b []byte) (err error) {
+	err = json.Unmarshal(b, sd)
+	return
+}
+
+// DecodeArg decodes schema diff arg.
+func (sd *SchemaDiff) DecodeArg(arg interface{}) (err error) {
+	err = json.Unmarshal(sd.RawArg, arg)
+	sd.Arg = arg
+	return
 }

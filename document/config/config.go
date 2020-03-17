@@ -4,7 +4,6 @@ import "time"
 
 // Value for document db configuration
 type Value struct {
-	ReloadMaxTickInterval time.Duration
 	WorkerMaxTickInterval time.Duration
 	Lease                 time.Duration
 }
