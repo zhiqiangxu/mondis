@@ -12,6 +12,7 @@ import (
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
+	"github.com/zhiqiangxu/mondis/document/txn"
 	"github.com/zhiqiangxu/util/logger"
 	"go.uber.org/zap"
 )
@@ -48,6 +49,11 @@ func (do *Domain) init() {
 	callback := ddl.Callback{OnChanged: do.onChange}
 	do.ddl = ddl.New(do.kvdb, ddl.Options{Callback: callback})
 	go do.reloadInLoop()
+}
+
+// Txn to grab a Txn
+func (do *Domain) Txn(update bool) *txn.Txn {
+	return txn.NewTxn(do.handle.Get().Version(), update, do.kvdb)
 }
 
 func (do *Domain) onChange(err error) {
