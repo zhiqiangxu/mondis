@@ -1,4 +1,4 @@
-package db
+package dml
 
 import (
 	"github.com/zhiqiangxu/mondis"

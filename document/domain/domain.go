@@ -7,8 +7,8 @@ import (
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/config"
-	"github.com/zhiqiangxu/mondis/document/db"
 	"github.com/zhiqiangxu/mondis/document/ddl"
+	"github.com/zhiqiangxu/mondis/document/dml"
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
@@ -178,9 +178,9 @@ func (do *Domain) fetchAllDBs(m *meta.Meta) (dbInfos []*model.DBInfo, err error)
 }
 
 // DB for find a db by name
-func (do *Domain) DB(name string) (db *db.DB, err error) {
+func (do *Domain) DB(name string) (db *dml.DB, err error) {
 
-	db = db.NewDB(name, do.kvdb, do.handle)
+	db, err = dml.NewDB(name, do.kvdb, do.handle)
 	return
 }
 
