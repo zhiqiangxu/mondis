@@ -10,17 +10,17 @@ import (
 
 // Txn for document db
 type Txn struct {
+	mondis.ProviderTxn
 	handle             *schema.Handle
-	startSchemaVersion int64
+	startMetaCache     *schema.MetaCache
 	update             bool
-	t                  mondis.ProviderTxn
 	updatedCollections map[int64]struct{}
 }
 
 // NewTxn is ctor for Txn
-func NewTxn(schemaVersion int64, update bool, kvdb mondis.KVDB) *Txn {
+func NewTxn(startMetaCache *schema.MetaCache, update bool, kvdb mondis.KVDB) *Txn {
 	t := kvdb.NewTransaction(update)
-	return &Txn{startSchemaVersion: schemaVersion, update: update, t: t}
+	return &Txn{startMetaCache: startMetaCache, update: update, ProviderTxn: t}
 }
 
 var (
@@ -30,7 +30,7 @@ var (
 
 // Discard Txn
 func (txn *Txn) Discard() {
-	txn.t.Discard()
+	txn.ProviderTxn.Discard()
 }
 
 // Commit Txn
@@ -40,7 +40,7 @@ func (txn *Txn) Commit() (err error) {
 		return
 	}
 
-	ok, err := txn.handle.Check(context.Background(), txn.startSchemaVersion, txn.updatedCollections)
+	ok, err := txn.handle.Check(context.Background(), txn.startMetaCache, txn.updatedCollections)
 	if err != nil {
 		return
 	}
@@ -50,8 +50,13 @@ func (txn *Txn) Commit() (err error) {
 		return
 	}
 
-	err = txn.t.Commit()
+	err = txn.ProviderTxn.Commit()
 	return
+}
+
+// StartMetaCache returns startMetaCache
+func (txn *Txn) StartMetaCache() *schema.MetaCache {
+	return txn.startMetaCache
 }
 
 // UpdatedCollections for storing updated collections before commit

@@ -29,15 +29,19 @@ func (h *Handle) Get() *MetaCache {
 
 // Check is called before a dml txn commit.
 // this is called when txn commits
-func (h *Handle) Check(ctx context.Context, startVersion int64, updatedCollections map[int64]struct{}) (checkOK bool, err error) {
+func (h *Handle) Check(ctx context.Context, startMetaCache *MetaCache, updatedCollections map[int64]struct{}) (checkOK bool, err error) {
 	err = h.mu.RLock(ctx)
 	if err != nil {
 		return
 	}
 	v := h.value.Load()
 	cache, _ := v.(*MetaCache)
-	if cache != nil && cache.version > startVersion {
-		for i := startVersion + 1; i <= cache.version; i++ {
+	if cache != startMetaCache {
+		if startMetaCache == nil {
+			h.mu.RUnlock()
+			return
+		}
+		for i := startMetaCache.version + 1; i <= cache.version; i++ {
 			diffIdx := int(i - cache.diffStartVersion)
 			if diffIdx < 0 {
 				h.mu.RUnlock()

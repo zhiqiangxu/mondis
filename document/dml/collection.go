@@ -1,6 +1,8 @@
 package dml
 
 import (
+	"errors"
+
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/document/schema"
@@ -15,48 +17,99 @@ type Collection struct {
 	base
 }
 
+var (
+	// ErrDocNotFound used by Collection
+	ErrDocNotFound = errors.New("document not found")
+	// ErrDocExists used by Collection
+	ErrDocExists = errors.New("document already exists")
+)
+
 func newCollection(dbName, collectionName string, kvdb mondis.KVDB, handle *schema.Handle) *Collection {
 	return &Collection{dbName: dbName, collectionName: collectionName, base: base{kvdb: kvdb, handle: handle}}
 }
 
 // Index for find an index by name
-func (collection *Collection) Index(name string) (idx *Index, err error) {
-	schemaCache := collection.handle.Get()
+func (c *Collection) Index(name string) (idx *Index, err error) {
+	schemaCache := c.handle.Get()
 
-	if !schemaCache.CheckIndexExists(collection.dbName, collection.collectionName, name) {
+	if !schemaCache.CheckIndexExists(c.dbName, c.collectionName, name) {
 		err = ErrIndexNotExists
 		return
 	}
 
-	idx = newIndex(collection.dbName, collection.collectionName, name, collection.kvdb, collection.handle)
+	idx = newIndex(c.dbName, c.collectionName, name, c.kvdb, c.handle)
 	return
 }
 
-func (collection *Collection) info() *model.CollectionInfo {
-
-	return collection.handle.Get().CollectionInfo(collection.dbName, collection.collectionName)
-
-}
-
 // InsertOne for insert a document into collection
-func (collection *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
-
-	collectionInfo := collection.info()
-	if collectionInfo == nil {
-		err = ErrCollectionNotExists
-		return
-	}
+func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 
 	insertFunc := func(t *txn.Txn) error {
+
+		ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+		if ci == nil {
+			return ErrCollectionNotExists
+		}
 		// did, err = t.InsertOne(collection.dbName, collection.collectionName, doc)
 
-		t.UpdatedCollections(collectionInfo.ID)
+		t.UpdatedCollections(ci.ID)
 		return err
 	}
 	if t != nil {
 		insertFunc(t)
 	} else {
-		collection.RunInNewUpdateTxn(insertFunc)
+		c.RunInNewUpdateTxn(insertFunc)
 	}
+	return
+}
+
+const (
+	updateForUpdate int8 = iota
+	updateForUpsert
+	updateForInsert
+)
+
+func (c *Collection) updateOne(did int64, doc bson.M, ci *model.CollectionInfo, updateFor int8, t *txn.Txn) (existsForUpdate, isNewForUpsert bool, err error) {
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		return
+	}
+
+	docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
+
+	updateFunc := func(t *txn.Txn) (err error) {
+		existsForUpdate, err = t.Exists(docKey)
+		if err != nil {
+			return
+		}
+
+		switch updateFor {
+		case updateForUpdate:
+			if !existsForUpdate {
+				return
+			}
+		case updateForUpsert:
+			isNewForUpsert = !existsForUpdate
+		case updateForInsert:
+			if existsForUpdate {
+				err = ErrDocExists
+				return
+			}
+		}
+
+		err = t.Set(docKey, data, nil)
+		if err != nil {
+			return
+		}
+
+		return
+	}
+
+	if t == nil {
+		err = c.RunInNewUpdateTxn(updateFunc)
+	} else {
+		err = updateFunc(t)
+	}
+
 	return
 }
