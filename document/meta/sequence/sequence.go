@@ -14,11 +14,14 @@ var (
 	ErrEmptyFieldForHashSequence = errors.New("field cannot be empty for hash sequence")
 	// ErrZeroBandwidth used by StringSequence/HashSequence
 	ErrZeroBandwidth = errors.New("bandwidth must be greater than zero")
+	// ErrSequenceClosed used by Sequence
+	ErrSequenceClosed = errors.New("sequence closed")
 )
 
 // Sequence for common ops between StringSequence and HashSequence
 type Sequence struct {
 	sync.Mutex
+	closed           bool
 	next             int64
 	leased           int64
 	bandwidth        int64
@@ -32,6 +35,11 @@ func (sc *Sequence) ReNew() (err error) {
 	sc.Lock()
 	defer sc.Unlock()
 
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
+
 	err = sc.renewLeaseFunc(0)
 	if err != nil {
 		return
@@ -40,11 +48,45 @@ func (sc *Sequence) ReNew() (err error) {
 	return
 }
 
+func (sc *Sequence) checkStatus() (err error) {
+	if sc.closed {
+		err = ErrSequenceClosed
+	}
+	return
+}
+
+// Close sequence
+func (sc *Sequence) Close(releaseRemaining bool) (err error) {
+	sc.Lock()
+	defer sc.Unlock()
+
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
+
+	sc.closed = true
+	if releaseRemaining {
+		err = sc.releaseRemainingLocked()
+	}
+	return
+}
+
 // ReleaseRemaining for release the remaining sequence to avoid wasted integers.
 func (sc *Sequence) ReleaseRemaining() (err error) {
 	sc.Lock()
 	defer sc.Unlock()
 
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
+
+	err = sc.releaseRemainingLocked()
+	return
+}
+
+func (sc *Sequence) releaseRemainingLocked() (err error) {
 	if sc.leased == sc.next {
 		return
 	}
@@ -58,6 +100,11 @@ func (sc *Sequence) Clear() (err error) {
 	sc.Lock()
 	defer sc.Unlock()
 
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
+
 	err = sc.clearFunc()
 	return
 }
@@ -67,6 +114,11 @@ func (sc *Sequence) Clear() (err error) {
 func (sc *Sequence) Next() (val int64, err error) {
 	sc.Lock()
 	defer sc.Unlock()
+
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
 
 	if sc.next >= sc.leased {
 		err = sc.renewLeaseFunc(0)
@@ -95,6 +147,11 @@ func (sc *Sequence) NextN(n int64) (ranges []IDRange, err error) {
 
 	sc.Lock()
 	defer sc.Unlock()
+
+	err = sc.checkStatus()
+	if err != nil {
+		return
+	}
 
 	if sc.next+n <= sc.leased {
 		end := sc.next + n
