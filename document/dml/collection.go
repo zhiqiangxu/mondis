@@ -43,22 +43,47 @@ func (c *Collection) Index(name string) (idx *Index, err error) {
 
 // InsertOne for insert a document into collection
 func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		return
+	}
 
-	insertFunc := func(t *txn.Txn) error {
+	insertFunc := func(t *txn.Txn) (ierr error) {
 
 		ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 		if ci == nil {
-			return ErrCollectionNotExists
+			ierr = ErrCollectionNotExists
+			return
 		}
-		// did, err = t.InsertOne(collection.dbName, collection.collectionName, doc)
 
+		seq := GetSequence(ci.ID)
+		if seq == nil {
+			ierr = ErrSequenceNotExists
+			return
+		}
+
+		did, ierr = seq.Next()
+		if ierr != nil {
+			return
+		}
+
+		docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
+
+		ierr = t.Set(docKey, data, nil)
+		if err != nil {
+			return
+		}
+
+		t.AddCancelFunc(func() {
+			seq.PutBack(did)
+		})
 		t.UpdatedCollections(ci.ID)
-		return err
+		return
 	}
 	if t != nil {
-		insertFunc(t)
+		err = insertFunc(t)
 	} else {
-		c.RunInNewUpdateTxn(insertFunc)
+		err = c.RunInNewUpdateTxn(insertFunc)
 	}
 	return
 }

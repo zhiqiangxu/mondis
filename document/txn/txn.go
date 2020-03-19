@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/document/meta/sequence"
 	"github.com/zhiqiangxu/mondis/document/schema"
 )
 
@@ -13,8 +14,10 @@ type Txn struct {
 	mondis.ProviderTxn
 	handle             *schema.Handle
 	startMetaCache     *schema.MetaCache
-	update             bool
+	sequenceMap        map[int64]*sequence.Hash
 	updatedCollections map[int64]struct{}
+	cancelFuncs        []func()
+	update             bool
 }
 
 // NewTxn is ctor for Txn
@@ -40,6 +43,15 @@ func (txn *Txn) Commit() (err error) {
 		return
 	}
 
+	defer func() {
+		if err != nil {
+			for _, cancelFunc := range txn.cancelFuncs {
+				cancelFunc()
+			}
+			txn.cancelFuncs = nil
+		}
+	}()
+
 	ok, err := txn.handle.Check(context.Background(), txn.startMetaCache, txn.updatedCollections)
 	if err != nil {
 		return
@@ -52,6 +64,14 @@ func (txn *Txn) Commit() (err error) {
 
 	err = txn.ProviderTxn.Commit()
 	return
+}
+
+// AddCancelFunc adds a cancelFunc to be called when Commit failed
+func (txn *Txn) AddCancelFunc(cancelFunc func()) {
+	if !txn.update {
+		panic("AddCancelFunc called on read only txn")
+	}
+	txn.cancelFuncs = append(txn.cancelFuncs, cancelFunc)
 }
 
 // StartMetaCache returns startMetaCache

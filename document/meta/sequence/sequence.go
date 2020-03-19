@@ -25,22 +25,23 @@ type Sequence struct {
 	next             int64
 	leased           int64
 	bandwidth        int64
+	putbacks         []int64
 	renewLeaseFunc   func(step int64) (err error)
 	updateLeasedFunc func() error
 	clearFunc        func() error
 }
 
 // ReNew effectually creates another Sequence
-func (sc *Sequence) ReNew() (err error) {
-	sc.Lock()
-	defer sc.Unlock()
+func (seq *Sequence) ReNew() (err error) {
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	err = sc.renewLeaseFunc(0)
+	err = seq.renewLeaseFunc(0)
 	if err != nil {
 		return
 	}
@@ -48,87 +49,101 @@ func (sc *Sequence) ReNew() (err error) {
 	return
 }
 
-func (sc *Sequence) checkStatus() (err error) {
-	if sc.closed {
+func (seq *Sequence) checkStatus() (err error) {
+	if seq.closed {
 		err = ErrSequenceClosed
 	}
 	return
 }
 
 // Close sequence
-func (sc *Sequence) Close(releaseRemaining bool) (err error) {
-	sc.Lock()
-	defer sc.Unlock()
+func (seq *Sequence) Close(releaseRemaining bool) (err error) {
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	sc.closed = true
+	seq.closed = true
 	if releaseRemaining {
-		err = sc.releaseRemainingLocked()
+		err = seq.releaseRemainingLocked()
 	}
 	return
 }
 
 // ReleaseRemaining for release the remaining sequence to avoid wasted integers.
-func (sc *Sequence) ReleaseRemaining() (err error) {
-	sc.Lock()
-	defer sc.Unlock()
+func (seq *Sequence) ReleaseRemaining() (err error) {
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	err = sc.releaseRemainingLocked()
+	err = seq.releaseRemainingLocked()
 	return
 }
 
-func (sc *Sequence) releaseRemainingLocked() (err error) {
-	if sc.leased == sc.next {
+func (seq *Sequence) releaseRemainingLocked() (err error) {
+	if seq.leased == seq.next {
 		return
 	}
 
-	err = sc.updateLeasedFunc()
+	err = seq.updateLeasedFunc()
 	return
 }
 
 // Clear sequence totally
-func (sc *Sequence) Clear() (err error) {
-	sc.Lock()
-	defer sc.Unlock()
+func (seq *Sequence) Clear() (err error) {
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	err = sc.clearFunc()
+	err = seq.clearFunc()
 	return
+}
+
+// PutBack for reuse
+func (seq *Sequence) PutBack(vals ...int64) {
+	seq.Lock()
+	defer seq.Unlock()
+
+	seq.putbacks = append(seq.putbacks, vals...)
 }
 
 // Next would return the next integer in the sequence, updating the lease by running a transaction
 // if needed.
-func (sc *Sequence) Next() (val int64, err error) {
-	sc.Lock()
-	defer sc.Unlock()
+func (seq *Sequence) Next() (val int64, err error) {
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	if sc.next >= sc.leased {
-		err = sc.renewLeaseFunc(0)
+	if len(seq.putbacks) > 0 {
+		val = seq.putbacks[len(seq.putbacks)-1]
+		seq.putbacks = seq.putbacks[0 : len(seq.putbacks)-1]
+		return
+	}
+
+	if seq.next >= seq.leased {
+		err = seq.renewLeaseFunc(0)
 		if err != nil {
 			return
 		}
 	}
 
-	sc.next++
-	val = sc.next
+	seq.next++
+	val = seq.next
 	return
 }
 
@@ -140,31 +155,33 @@ type IDRange struct {
 
 // NextN return n consecutive id in ranges
 // when succeed, len(ranges) should be either 1 or 2
-func (sc *Sequence) NextN(n int64) (ranges []IDRange, err error) {
+func (seq *Sequence) NextN(n int64) (ranges []IDRange, err error) {
 	if n == 0 {
 		return
 	}
 
-	sc.Lock()
-	defer sc.Unlock()
+	seq.Lock()
+	defer seq.Unlock()
 
-	err = sc.checkStatus()
+	err = seq.checkStatus()
 	if err != nil {
 		return
 	}
 
-	if sc.next+n <= sc.leased {
-		end := sc.next + n
-		r := IDRange{Start: sc.next, End: end}
+	// TODO pick up putbacks
+
+	if seq.next+n <= seq.leased {
+		end := seq.next + n
+		r := IDRange{Start: seq.next, End: end}
 		ranges = []IDRange{r}
-		sc.next = end
+		seq.next = end
 		return
 	}
 
-	nextCopy := sc.next
-	remain := sc.leased - nextCopy
-	step := n + sc.bandwidth - remain
-	err = sc.renewLeaseFunc(step)
+	nextCopy := seq.next
+	remain := seq.leased - nextCopy
+	step := n + seq.bandwidth - remain
+	err = seq.renewLeaseFunc(step)
 	if err != nil {
 		return
 	}
@@ -174,7 +191,7 @@ func (sc *Sequence) NextN(n int64) (ranges []IDRange, err error) {
 		ranges = []IDRange{r}
 	}
 
-	r := IDRange{Start: sc.next, End: sc.next + n - remain}
+	r := IDRange{Start: seq.next, End: seq.next + n - remain}
 	ranges = append(ranges, r)
 
 	return
