@@ -63,6 +63,7 @@ func (w *worker) handleJobQueue() (err error) {
 	var (
 		nojob         bool
 		schemaVersion int64
+		failNow       bool
 		runJobErr     error
 		cancelFunc    func()
 		job           *model.Job
@@ -89,7 +90,7 @@ func (w *worker) handleJobQueue() (err error) {
 			}
 
 			util2.RunWithRecovery(func() {
-				schemaVersion, cancelFunc, runJobErr = w.runJob(m, job)
+				schemaVersion, cancelFunc, failNow, runJobErr = w.runJob(m, job)
 			}, func(interface{}) {
 				job.State = model.JobStateCancelling
 			})
@@ -98,7 +99,7 @@ func (w *worker) handleJobQueue() (err error) {
 				job.ErrorCount++
 				job.Error = runJobErr
 				logger.Instance().Error("runJob", zap.Any("job", job), zap.Error(runJobErr))
-				if job.ErrorCount >= jobMaxErrorCount {
+				if failNow || job.ErrorCount >= jobMaxErrorCount {
 					err = w.finishJob(m, job)
 					return
 				}
@@ -136,14 +137,14 @@ func (w *worker) handleJobQueue() (err error) {
 	}
 }
 
-func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), err error) {
+func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
 	if job.IsFinished() {
 		return
 	}
 
 	switch job.Type {
 	case model.ActionCreateSchema:
-		schemaVersion, cancelFunc, err = w.onCreateSchema(m, job)
+		schemaVersion, cancelFunc, failNow, err = w.onCreateSchema(m, job)
 	default:
 		// Invalid job, cancel it.
 		job.State = model.JobStateCancelled
@@ -173,7 +174,7 @@ func (w *worker) getFirstJob(m *meta.Meta) (job *model.Job, err error) {
 	return
 }
 
-func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), err error) {
+func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
 
 	dbInfo := &model.DBInfo{}
 	if err = job.DecodeArg(dbInfo); err != nil {
@@ -181,6 +182,15 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 		return
 	}
 
+	exists, err := checkDBNameNotExists(m, dbInfo.Name)
+	if err != nil {
+		return
+	}
+	if exists {
+		failNow = true
+		err = ErrDBAlreadyExists
+		return
+	}
 	cf := func() {
 		for _, collection := range dbInfo.Collections {
 			util2.TryUntilSuccess(func() bool {

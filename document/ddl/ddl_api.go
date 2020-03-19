@@ -27,6 +27,16 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 			err = ErrJobsInQueueExceeded
 			return
 		}
+
+		exists, err := checkDBNameNotExists(m, input.DB)
+		if err != nil {
+			return
+		}
+		if exists {
+			err = ErrDBAlreadyExists
+			return
+		}
+
 		start, _, err := m.GenGlobalIDs(n)
 		if err != nil {
 			return

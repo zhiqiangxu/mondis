@@ -13,6 +13,8 @@ const (
 var (
 	// ErrJobsInQueueExceeded used by DDL
 	ErrJobsInQueueExceeded = errors.New("ddl jobs in queue exceeded")
+	// ErrDBAlreadyExists used by DDL
+	ErrDBAlreadyExists = errors.New("db already exists")
 )
 
 // DDL is responsible for updating schema in data store and maintaining in-memory schema cache.
