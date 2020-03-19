@@ -12,12 +12,12 @@ import (
 // Txn for document db
 type Txn struct {
 	mondis.ProviderTxn
-	handle             *schema.Handle
-	startMetaCache     *schema.MetaCache
-	sequenceMap        map[int64]*sequence.Hash
-	updatedCollections map[int64]struct{}
-	cancelFuncs        []func()
-	update             bool
+	handle              *schema.Handle
+	startMetaCache      *schema.MetaCache
+	sequenceMap         map[int64]*sequence.Hash
+	referredCollections map[int64]struct{}
+	cancelFuncs         []func()
+	update              bool
 }
 
 // NewTxn is ctor for Txn
@@ -52,7 +52,7 @@ func (txn *Txn) Commit() (err error) {
 		}
 	}()
 
-	ok, err := txn.handle.Check(context.Background(), txn.startMetaCache, txn.updatedCollections)
+	ok, err := txn.handle.Check(context.Background(), txn.startMetaCache, txn.referredCollections)
 	if err != nil {
 		return
 	}
@@ -79,13 +79,13 @@ func (txn *Txn) StartMetaCache() *schema.MetaCache {
 	return txn.startMetaCache
 }
 
-// UpdatedCollections for storing updated collections before commit
-func (txn *Txn) UpdatedCollections(collectionIDs ...int64) {
-	if txn.updatedCollections == nil {
-		txn.updatedCollections = make(map[int64]struct{})
+// ReferredCollections for storing referred collections before commit
+func (txn *Txn) ReferredCollections(collectionIDs ...int64) {
+	if txn.referredCollections == nil {
+		txn.referredCollections = make(map[int64]struct{})
 	}
 
 	for _, collectionID := range collectionIDs {
-		txn.updatedCollections[collectionID] = struct{}{}
+		txn.referredCollections[collectionID] = struct{}{}
 	}
 }

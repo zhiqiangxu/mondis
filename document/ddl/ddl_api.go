@@ -50,8 +50,8 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 				nextID++
 			}
 			dbInfo.CollectionOrder = append(dbInfo.CollectionOrder, cn)
-			if len(input.Indexes[cn]) > 0 {
-				for _, indexInfo := range input.Indexes[cn] {
+			if len(input.Indices[cn]) > 0 {
+				for _, indexInfo := range input.Indices[cn] {
 					collectInfo.Indices[indexInfo.Name] = indexInfo.ToModel()
 					collectInfo.IndexOrder = append(collectInfo.IndexOrder, indexInfo.Name)
 				}

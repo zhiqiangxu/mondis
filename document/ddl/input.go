@@ -10,7 +10,7 @@ import (
 type CreateSchemaInput struct {
 	DB          string
 	Collections []string
-	Indexes     map[string][]IndexInfo
+	Indices     map[string][]IndexInfo
 }
 
 // Validate CreateSchemaInput
@@ -25,7 +25,7 @@ func (in *CreateSchemaInput) Validate() (err error) {
 			return
 		}
 	}
-	for _, indexInfos := range in.Indexes {
+	for _, indexInfos := range in.Indices {
 		for _, indexInfo := range indexInfos {
 			err = indexInfo.Validate()
 			if err != nil {
@@ -54,7 +54,7 @@ func (in *DropSchemaInput) Validate() (err error) {
 type CreateCollectionInput struct {
 	DB         string
 	Collection string
-	Indexes    []IndexInfo
+	Indices    []IndexInfo
 }
 
 // Validate CreateCollectionInput
@@ -68,7 +68,7 @@ func (in *CreateCollectionInput) Validate() (err error) {
 		return
 	}
 
-	for _, indexInfo := range in.Indexes {
+	for _, indexInfo := range in.Indices {
 		err = indexInfo.Validate()
 		if err != nil {
 			return

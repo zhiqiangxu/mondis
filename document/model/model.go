@@ -28,7 +28,6 @@ type (
 		Name    string
 		Columns []string
 		Unique  bool
-		Primary bool
 		State   osc.SchemaState
 	}
 	// Job for a DDL operation
