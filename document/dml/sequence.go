@@ -55,6 +55,8 @@ func DropSequence(cid int64) (err error) {
 		return
 	}
 
+	sequenceMap.Delete(cid)
+
 	err = v.(*sequence.Hash).Close(config.Load().Lease == 0)
 	return
 }
@@ -65,6 +67,8 @@ func DropSequenceIfExists(cid int64) (err error) {
 	if !exists {
 		return
 	}
+
+	sequenceMap.Delete(cid)
 
 	err = v.(*sequence.Hash).Close(config.Load().Lease == 0)
 	return

@@ -32,6 +32,23 @@ func TryCommitWhenTxnTooBig(kvdb mondis.KVDB, txn mondis.ProviderTxn, f func(txn
 	}
 }
 
+// RunInNewUpdateTxnWithCancel will call cancelFunc when Commit failed
+func RunInNewUpdateTxnWithCancel(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error, cancelFunc func()) (err error) {
+	txn := kvdb.NewTransaction(true)
+	defer txn.Discard()
+
+	err = f(txn)
+	if err != nil {
+		return
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		cancelFunc()
+	}
+	return
+}
+
 // RunInNewUpdateTxn for run f in a new update transaction
 func RunInNewUpdateTxn(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error) (err error) {
 	txn := kvdb.NewTransaction(true)

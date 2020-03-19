@@ -7,6 +7,7 @@ import (
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/config"
+	"github.com/zhiqiangxu/mondis/document/dml"
 	"github.com/zhiqiangxu/mondis/document/meta"
 	"github.com/zhiqiangxu/mondis/document/model"
 	"github.com/zhiqiangxu/mondis/util"
@@ -59,10 +60,11 @@ func (w *worker) handleJobQueue() (err error) {
 		nojob         bool
 		schemaVersion int64
 		runJobErr     error
+		cancelFunc    func()
 		job           *model.Job
 	)
 	for {
-		err = util.RunInNewUpdateTxn(w.d.kvdb, func(txn mondis.ProviderTxn) (err error) {
+		err = util.RunInNewUpdateTxnWithCancel(w.d.kvdb, func(txn mondis.ProviderTxn) (err error) {
 			m := meta.NewMeta(txn)
 
 			job, err = w.getFirstJob(m)
@@ -83,7 +85,7 @@ func (w *worker) handleJobQueue() (err error) {
 			}
 
 			util2.RunWithRecovery(func() {
-				schemaVersion, runJobErr = w.runJob(m, job)
+				schemaVersion, cancelFunc, runJobErr = w.runJob(m, job)
 			}, func(interface{}) {
 				job.State = model.JobStateCancelling
 			})
@@ -99,6 +101,8 @@ func (w *worker) handleJobQueue() (err error) {
 
 			err = w.updateJob(m, job)
 			return
+		}, func() {
+			cancelFunc()
 		})
 		if w.d.options.Callback.OnChanged != nil {
 			w.d.options.Callback.OnChanged(err)
@@ -118,14 +122,14 @@ func (w *worker) handleJobQueue() (err error) {
 	}
 }
 
-func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, err error) {
+func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), err error) {
 	if job.IsFinished() {
 		return
 	}
 
 	switch job.Type {
 	case model.ActionCreateSchema:
-		schemaVersion, err = w.onCreateSchema(m, job)
+		schemaVersion, cancelFunc, err = w.onCreateSchema(m, job)
 	default:
 		// Invalid job, cancel it.
 		job.State = model.JobStateCancelled
@@ -155,7 +159,7 @@ func (w *worker) getFirstJob(m *meta.Meta) (job *model.Job, err error) {
 	return
 }
 
-func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, err error) {
+func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), err error) {
 
 	dbInfo := &model.DBInfo{}
 	if err = job.DecodeArg(dbInfo); err != nil {
@@ -163,6 +167,34 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 		return
 	}
 
+	cf := func() {
+		for _, collection := range dbInfo.Collections {
+			util2.TryUntilSuccess(func() bool {
+				dropErr := dml.DropSequenceIfExists(collection.ID)
+				if dropErr != nil {
+					logger.Instance().Error("DropSequenceIfExists", zap.Int64("cid", collection.ID), zap.Error(dropErr))
+				}
+				return dropErr == nil
+			}, time.Second)
+		}
+	}
+	defer func() {
+		if err != nil {
+			cf()
+		}
+	}()
+
+	dbInfo.State = osc.StatePublic
+	for _, collection := range dbInfo.Collections {
+		err = dml.CreateSequence(w.d.kvdb, dbInfo.ID, collection.ID, 0)
+		if err != nil {
+			return
+		}
+		collection.State = osc.StatePublic
+		for _, index := range collection.Indices {
+			index.State = osc.StatePublic
+		}
+	}
 	err = m.CreateDatabase(dbInfo)
 	if err != nil {
 		return
@@ -180,6 +212,7 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 	}
 	job.FinishDBJob(model.JobStateDone, osc.StatePublic, schemaVersion, dbInfo)
 
+	cancelFunc = cf
 	return
 
 }
