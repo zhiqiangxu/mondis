@@ -25,6 +25,7 @@ type (
 	}
 	// IndexInfo for index
 	IndexInfo struct {
+		ID      int64
 		Name    string
 		Columns []string
 		Unique  bool

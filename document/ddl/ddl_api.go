@@ -16,7 +16,7 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 		return
 	}
 
-	n := 2 + len(input.Collections)
+	n := 2 + len(input.Collections) + len(input.Indices)
 	err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
 		m := meta.NewMeta(txn)
 		queueLength, err := m.DDLJobQueueLen()
@@ -52,7 +52,9 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 			dbInfo.CollectionOrder = append(dbInfo.CollectionOrder, cn)
 			if len(input.Indices[cn]) > 0 {
 				for _, indexInfo := range input.Indices[cn] {
-					collectInfo.Indices[indexInfo.Name] = indexInfo.ToModel()
+					iif := indexInfo.ToModel()
+					iif.ID = nextID + 1
+					collectInfo.Indices[indexInfo.Name] = iif
 					collectInfo.IndexOrder = append(collectInfo.IndexOrder, indexInfo.Name)
 				}
 			}
