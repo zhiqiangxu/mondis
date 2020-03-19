@@ -21,6 +21,7 @@ type MetaCache struct {
 // NewMetaCache is ctor for MetaCache
 func NewMetaCache(version int64, dbInfos []*model.DBInfo) *MetaCache {
 	c := &MetaCache{version: version, diffStartVersion: version + 1}
+	c.dbs = make(map[string]*model.DBInfo)
 	for _, dbInfo := range dbInfos {
 		c.dbs[dbInfo.Name] = dbInfo.Clone()
 	}

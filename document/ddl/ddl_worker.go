@@ -53,6 +53,10 @@ func (w *worker) start() {
 	}
 }
 
+const (
+	jobMaxErrorCount = 3
+)
+
 // handleJobQueue handles jobs in Job queue.
 func (w *worker) handleJobQueue() (err error) {
 
@@ -91,7 +95,13 @@ func (w *worker) handleJobQueue() (err error) {
 			})
 
 			if runJobErr != nil {
+				job.ErrorCount++
+				job.Error = runJobErr
 				logger.Instance().Error("runJob", zap.Any("job", job), zap.Error(runJobErr))
+				if job.ErrorCount >= jobMaxErrorCount {
+					err = w.finishJob(m, job)
+					return
+				}
 			}
 
 			if job.IsCancelled() {
@@ -104,13 +114,17 @@ func (w *worker) handleJobQueue() (err error) {
 		}, func() {
 			cancelFunc()
 		})
-		if w.d.options.Callback.OnChanged != nil {
-			w.d.options.Callback.OnChanged(err)
-		}
-		if err != nil {
+		if nojob {
 			return
 		}
-		if nojob {
+		if w.d.options.Callback.OnChanged != nil {
+			changeErr := runJobErr
+			if changeErr == nil {
+				changeErr = err
+			}
+			w.d.options.Callback.OnChanged(changeErr)
+		}
+		if err != nil {
 			return
 		}
 

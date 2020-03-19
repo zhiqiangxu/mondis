@@ -13,7 +13,7 @@ type base struct {
 
 // Txn to grab a Txn
 func (b *base) Txn(update bool) *txn.Txn {
-	return txn.NewTxn(b.handle.Get(), update, b.kvdb)
+	return txn.NewTxn(b.handle, update, b.kvdb)
 }
 
 // RunInNewUpdateTxn for document db

@@ -49,13 +49,17 @@ func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 		return
 	}
 
-	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
-	if ci == nil {
-		err = ErrCollectionNotExists
-		return
-	}
+	origT := t
 
 	insertFunc := func(t *txn.Txn) (ierr error) {
+		ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+		if ci == nil {
+			err = ErrCollectionNotExists
+			return
+		}
+		if origT != nil {
+			origT.ReferredCollections(ci.ID)
+		}
 
 		seq := GetSequence(ci.ID)
 		if seq == nil {
@@ -80,9 +84,9 @@ func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 		})
 		return
 	}
+
 	if t != nil {
 		err = insertFunc(t)
-		t.ReferredCollections(ci.ID)
 	} else {
 		err = c.RunInNewUpdateTxn(insertFunc)
 	}
@@ -91,48 +95,42 @@ func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 
 // InsertOneManaged for insert a new document with specified document id
 func (c *Collection) InsertOneManaged(did int64, doc bson.M, t *txn.Txn) (err error) {
-	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
-	if ci == nil {
-		err = ErrCollectionNotExists
-		return
-	}
-	_, _, err = c.updateOne(did, doc, ci, updateForInsert, t)
+
+	_, _, err = c.updateOne(did, doc, updateForInsert, t)
 	return
 }
 
 // UpdateOne for update an existing document in collection
 func (c *Collection) UpdateOne(did int64, doc bson.M, t *txn.Txn) (exists bool, err error) {
-	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
-	if ci == nil {
-		err = ErrCollectionNotExists
-		return
-	}
-	exists, _, err = c.updateOne(did, doc, ci, updateForUpdate, t)
+
+	exists, _, err = c.updateOne(did, doc, updateForUpdate, t)
 	return
 }
 
 // UpsertOne for upsert an existing document in collection
 func (c *Collection) UpsertOne(did int64, doc bson.M, t *txn.Txn) (isNew bool, err error) {
-	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
-	if ci == nil {
-		err = ErrCollectionNotExists
-		return
-	}
-	_, isNew, err = c.updateOne(did, doc, ci, updateForUpsert, t)
+
+	_, isNew, err = c.updateOne(did, doc, updateForUpsert, t)
 	return
 }
 
 // DeleteOne for delete a document from collection
 func (c *Collection) DeleteOne(did int64, t *txn.Txn) (err error) {
-	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
-	if ci == nil {
-		err = ErrCollectionNotExists
-		return
-	}
 
-	docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
+	origT := t
 
 	deleteFunc := func(t *txn.Txn) (err error) {
+		ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+		if ci == nil {
+			err = ErrCollectionNotExists
+			return
+		}
+
+		if origT != nil {
+			origT.ReferredCollections(ci.ID)
+		}
+
+		docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
 		err = t.Delete(docKey)
 		return
 	}
@@ -141,7 +139,6 @@ func (c *Collection) DeleteOne(did int64, t *txn.Txn) (err error) {
 		err = c.RunInNewUpdateTxn(deleteFunc)
 	} else {
 		err = deleteFunc(t)
-		t.ReferredCollections(ci.ID)
 	}
 	return
 }
@@ -152,15 +149,27 @@ const (
 	updateForInsert
 )
 
-func (c *Collection) updateOne(did int64, doc bson.M, ci *model.CollectionInfo, updateFor int8, t *txn.Txn) (existsForUpdate, isNewForUpsert bool, err error) {
+func (c *Collection) updateOne(did int64, doc bson.M, updateFor int8, t *txn.Txn) (existsForUpdate, isNewForUpsert bool, err error) {
 	data, err := bson.Marshal(doc)
 	if err != nil {
 		return
 	}
 
-	docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
+	origT := t
 
 	updateFunc := func(t *txn.Txn) (err error) {
+		ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+		if ci == nil {
+			err = ErrCollectionNotExists
+			return
+		}
+
+		if origT != nil {
+			origT.ReferredCollections(ci.ID)
+		}
+
+		docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
+
 		existsForUpdate, err = t.Exists(docKey)
 		if err != nil {
 			return
@@ -192,7 +201,6 @@ func (c *Collection) updateOne(did int64, doc bson.M, ci *model.CollectionInfo, 
 		err = c.RunInNewUpdateTxn(updateFunc)
 	} else {
 		err = updateFunc(t)
-		t.ReferredCollections(ci.ID)
 	}
 
 	return
@@ -201,19 +209,24 @@ func (c *Collection) updateOne(did int64, doc bson.M, ci *model.CollectionInfo, 
 // GetOne for get a document by document id
 func (c *Collection) GetOne(did int64, t *txn.Txn) (data bson.M, err error) {
 
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
 	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 	if ci == nil {
 		err = ErrCollectionNotExists
 		return
 	}
 
-	docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
-	if t == nil {
-		t = c.Txn(false)
-		defer t.Discard()
-	} else {
-		t.ReferredCollections(ci.ID)
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
 	}
+
+	docKey := EncodeCollectionDocumentKey(nil, ci.ID, did)
 	v, _, err := t.Get(docKey)
 	if err == kv.ErrKeyNotFound {
 		err = ErrDocNotFound
@@ -229,17 +242,22 @@ func (c *Collection) GetOne(did int64, t *txn.Txn) (data bson.M, err error) {
 
 // GetMany for get many documents by document id list
 func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err error) {
+
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
 	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 	if ci == nil {
 		err = ErrCollectionNotExists
 		return
 	}
 
-	if t == nil {
-		t = c.Txn(false)
-		defer t.Discard()
-	} else {
-		t.ReferredCollections(ci.ID)
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
 	}
 
 	var v []byte
@@ -261,22 +279,28 @@ func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err erro
 
 		datas = append(datas, data)
 	}
+
 	return
 }
 
 // Count for total number of documents
 func (c *Collection) Count(t *txn.Txn) (n int, err error) {
+
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
 	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 	if ci == nil {
 		err = ErrCollectionNotExists
 		return
 	}
 
-	if t == nil {
-		t = c.Txn(false)
-		defer t.Discard()
-	} else {
-		t.ReferredCollections(ci.ID)
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
 	}
 
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, ci.ID)
@@ -289,25 +313,30 @@ func (c *Collection) Count(t *txn.Txn) (n int, err error) {
 
 // DeleteAll for delete all documents of a collection
 func (c *Collection) DeleteAll(t *txn.Txn) (n int, err error) {
+
+	if t == nil {
+		err = c.RunInNewUpdateTxn(func(t *txn.Txn) error {
+			n, err = c.deleteAllWithTxn(t, false)
+			return err
+		})
+	} else {
+		n, err = c.deleteAllWithTxn(t, true)
+	}
+
+	return
+}
+
+func (c *Collection) deleteAllWithTxn(t *txn.Txn, mark bool) (n int, err error) {
 	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 	if ci == nil {
 		err = ErrCollectionNotExists
 		return
 	}
 
-	if t == nil {
-		err = c.RunInNewUpdateTxn(func(t *txn.Txn) error {
-			n, err = c.deleteAllWithTxn(ci, t)
-			return err
-		})
-	} else {
-		n, err = c.deleteAllWithTxn(ci, t)
+	if mark {
 		t.ReferredCollections(ci.ID)
 	}
-	return
-}
 
-func (c *Collection) deleteAllWithTxn(ci *model.CollectionInfo, t *txn.Txn) (n int, err error) {
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, ci.ID)
 	scanErr := t.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
 		err = t.Delete(append([]byte(nil), key...))
@@ -327,18 +356,26 @@ func (c *Collection) deleteAllWithTxn(ci *model.CollectionInfo, t *txn.Txn) (n i
 
 // GetIndices returns a copy of all indexes
 func (c *Collection) GetIndices(t *txn.Txn) (iifs []*model.IndexInfo, err error) {
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
 	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
 	if ci == nil {
 		err = ErrCollectionNotExists
 		return
 	}
 
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
+	}
+
 	iifs = make([]*model.IndexInfo, 0, len(ci.Indices))
 	for _, iif := range ci.Indices {
 		iifs = append(iifs, iif.Clone())
-	}
-	if t != nil {
-		t.ReferredCollections(ci.ID)
 	}
 
 	return

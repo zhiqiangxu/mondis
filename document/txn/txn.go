@@ -21,9 +21,10 @@ type Txn struct {
 }
 
 // NewTxn is ctor for Txn
-func NewTxn(startMetaCache *schema.MetaCache, update bool, kvdb mondis.KVDB) *Txn {
+func NewTxn(handle *schema.Handle, update bool, kvdb mondis.KVDB) *Txn {
+	startMetaCache := handle.Get()
 	t := kvdb.NewTransaction(update)
-	return &Txn{startMetaCache: startMetaCache, update: update, ProviderTxn: t}
+	return &Txn{ProviderTxn: t, handle: handle, startMetaCache: startMetaCache, update: update}
 }
 
 var (

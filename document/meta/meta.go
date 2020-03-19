@@ -151,8 +151,12 @@ func (m *Meta) GenGlobalIDs(n int) (start, end int64, err error) {
 }
 
 // GetSchemaVersion gets current global schema version.
-func (m *Meta) GetSchemaVersion() (int64, error) {
-	return m.txn.GetInt64(schemaVersionKey)
+func (m *Meta) GetSchemaVersion() (v int64, err error) {
+	v, err = m.txn.GetInt64(schemaVersionKey)
+	if err == kv.ErrKeyNotFound {
+		err = nil
+	}
+	return
 }
 
 // GenSchemaVersion generates next schema version.
