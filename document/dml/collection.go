@@ -285,6 +285,48 @@ func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err erro
 
 // GetDidRange return doc id range
 func (c *Collection) GetDidRange(t *txn.Txn) (min, max int64, err error) {
+
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
+	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+	if ci == nil {
+		err = ErrCollectionNotExists
+		return
+	}
+
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
+	}
+
+	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, ci.ID)
+	scanErr := t.Scan(mondis.ProviderScanOption{Offset: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
+		_, min, err = DecodeCollectionDocumentKey(key)
+		return false
+	})
+	if err != nil {
+		return
+	}
+	if scanErr != nil {
+		err = scanErr
+		return
+	}
+	scanErr = t.Scan(mondis.ProviderScanOption{Reverse: true, Offset: collectionDocumentPrefix.PrefixNext()}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
+		_, max, err = DecodeCollectionDocumentKey(key)
+		return false
+	})
+	if err != nil {
+		return
+	}
+	if scanErr != nil {
+		err = scanErr
+		return
+	}
+
 	return
 }
 

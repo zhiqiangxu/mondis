@@ -219,6 +219,28 @@ func TestDocument(t *testing.T) {
 		t.Fatal("db.Collection", err)
 	}
 
+	// test GetDidRange before DeleteAll
+	{
+		key := "key range"
+		did1, err := c.InsertOne(bson.M{key: "value"}, nil)
+		if err != nil {
+			t.Fatal("c.InsertOne", err)
+		}
+		did2, err := c.InsertOne(bson.M{key: "value"}, nil)
+		if err != nil {
+			t.Fatal("c.InsertOne", err)
+		}
+
+		min, max, err := c.GetDidRange(nil)
+		if err != nil {
+			t.Fatal("c.GetDidRange", err)
+		}
+
+		if min != did1 || max != did2 {
+			t.Fatal("GetDidRange result not expected")
+		}
+	}
+
 	n, err := c.DeleteAll(nil)
 	if err != nil {
 		t.Fatal("c.DeleteAll", err, n)

@@ -12,7 +12,8 @@ import (
 
 const (
 	collectionPrefixLen       = len(keyspace.CollectionPrefix)
-	documentPrefix            = "_d"  // stores all collection documents
+	documentPrefix            = "_d" // stores all collection documents
+	documentPrefixLen         = len(documentPrefix)
 	indexDataPrefix           = "_id" // stores all collection index data
 	columnsIndexedPrefix      = "_ci" // stores all columns with index
 	indexNamePrefix           = "_in" // stores index name => index id
@@ -36,6 +37,7 @@ var (
 	reservedKeywordCollectionBytes = []byte(reservedKeywordCollection)
 	reservedKeywordIndexBytes      = []byte(reservedKeywordIndex)
 	indexNamePrefixBytes           = []byte(indexNamePrefix)
+	documentPrefixBytes            = []byte(documentPrefix)
 )
 
 // AppendCollectionDocumentPrefix appends c[cid]_d to buf
@@ -130,6 +132,42 @@ func hasCollectionPrefix(key kv.Key) bool {
 
 func hasIndexNamePrefix(key kv.Key) bool {
 	return bytes.HasPrefix(key, indexNamePrefixBytes)
+}
+
+func hasDocumentPrefix(key kv.Key) bool {
+	return bytes.HasPrefix(key, documentPrefixBytes)
+}
+
+// DecodeCollectionDocumentKey is reverse of EncodeCollectionDocumentKey
+func DecodeCollectionDocumentKey(key kv.Key) (cid, did int64, err error) {
+	if len(key) < collectionPrefixLen+8+len(documentPrefix)+8 {
+		err = fmt.Errorf("invalid collection document key - %q", key)
+		return
+	}
+
+	if !hasCollectionPrefix(key) {
+		err = fmt.Errorf("invalid collection document key - %q", key)
+		return
+	}
+
+	key = key[collectionPrefixLen:]
+	key, cid, err = memcomparable.DecodeInt64(key)
+	if err != nil {
+		return
+	}
+
+	if !hasDocumentPrefix(key) {
+		err = fmt.Errorf("invalid collection document key - %q", key)
+		return
+	}
+
+	key = key[documentPrefixLen:]
+	key, did, err = memcomparable.DecodeInt64(key)
+	if err != nil {
+		err = fmt.Errorf("invalid collection name to id key - %q", key)
+		return
+	}
+	return
 }
 
 // DecodeCollectionIndexName2IDKey is reverse for EncodeCollectionIndexName2IDKey
