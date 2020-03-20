@@ -56,14 +56,15 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 					ID:   nextID + 1,
 					Name: cn,
 				}
-				dbInfo.Collections[cn] = collectInfo
 				nextID++
+				dbInfo.Collections[cn] = collectInfo
 			}
 			dbInfo.CollectionOrder = append(dbInfo.CollectionOrder, cn)
 			if len(input.Indices[cn]) > 0 {
 				for _, indexInfo := range input.Indices[cn] {
 					iif := indexInfo.ToModel()
 					iif.ID = nextID + 1
+					nextID++
 					collectInfo.Indices[indexInfo.Name] = iif
 					collectInfo.IndexOrder = append(collectInfo.IndexOrder, indexInfo.Name)
 				}
@@ -74,6 +75,52 @@ func (d *DDL) CreateSchema(ctx context.Context, input CreateSchemaInput) (job *m
 			ID:   nextID + 1,
 			Type: model.ActionCreateSchema,
 			Arg:  dbInfo,
+		}
+
+		err = m.EnQueueDDLJob(job)
+
+		return
+	})
+
+	if err != nil {
+		return
+	}
+
+	d.notifyWorker(job.Type)
+
+	err = d.checkJob(ctx, job)
+	return
+}
+
+// AddIndex for add index
+func (d *DDL) AddIndex(ctx context.Context, input AddIndexInput) (job *model.Job, err error) {
+	err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
+		m := meta.NewMeta(txn)
+
+		exists, err := checkIndexNameNotExists(m, input.DB, input.Collection, input.IndexInfo.Name)
+		if err != nil {
+			return
+		}
+		if exists {
+			err = ErrIndexAlreadyExists
+			return
+		}
+
+		start, _, err := m.GenGlobalIDs(2)
+		if err != nil {
+			return
+		}
+
+		iif := input.IndexInfo.ToModel()
+		iif.ID = start + 1
+		iif.JobRedundant = &model.IndexInfoRedundant{
+			DB:         input.DB,
+			Collection: input.Collection,
+		}
+		job = &model.Job{
+			ID:   start + 2,
+			Type: model.ActionAddIndex,
+			Arg:  iif,
 		}
 
 		err = m.EnQueueDDLJob(job)

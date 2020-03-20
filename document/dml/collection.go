@@ -283,6 +283,11 @@ func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err erro
 	return
 }
 
+// GetDidRange return doc id range
+func (c *Collection) GetDidRange(t *txn.Txn) (min, max int64, err error) {
+	return
+}
+
 // Count for total number of documents
 func (c *Collection) Count(t *txn.Txn) (n int, err error) {
 

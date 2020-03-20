@@ -142,9 +142,15 @@ func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, canc
 		return
 	}
 
+	if !job.IsRollingback() && !job.IsCancelling() {
+		job.State = model.JobStateRunning
+	}
+
 	switch job.Type {
 	case model.ActionCreateSchema:
 		schemaVersion, cancelFunc, failNow, err = w.onCreateSchema(m, job)
+	case model.ActionAddIndex:
+		schemaVersion, cancelFunc, failNow, err = w.onAddIndex(m, job)
 	default:
 		// Invalid job, cancel it.
 		job.State = model.JobStateCancelled
@@ -171,6 +177,103 @@ func (w *worker) finishJob(m *meta.Meta, job *model.Job) (err error) {
 
 func (w *worker) getFirstJob(m *meta.Meta) (job *model.Job, err error) {
 	job, err = m.GetDDLJobByIdx(0)
+	return
+}
+
+func (w *worker) onAddIndex(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
+	indexInfo := &model.IndexInfo{}
+	if err = job.DecodeArg(indexInfo); err != nil {
+		job.State = model.JobStateCancelled
+		return
+	}
+
+	dbi, err := getDbInfo(m, indexInfo.JobRedundant.DB)
+	if err != nil {
+		return
+	}
+
+	if dbi == nil {
+		err = ErrDBNotExists
+		failNow = true
+		return
+	}
+
+	ci := dbi.CollectionInfo(indexInfo.JobRedundant.Collection)
+	if ci == nil {
+		err = ErrCollectionNotExists
+		failNow = true
+		return
+	}
+
+	iif := ci.IndexInfo(indexInfo.Name)
+
+	switch job.SchemaState {
+	case osc.StateAbsent:
+		// absent -> delete only
+		if iif != nil {
+			err = ErrIndexAlreadyExists
+			failNow = true
+			return
+		}
+
+		indexInfo.JobRedundant.CID = ci.ID
+		clone := indexInfo.Clone()
+		clone.JobRedundant = nil
+		clone.State = osc.StateDeleteOnly
+		ok := ci.AddIndexInfo(clone)
+		if !ok {
+			panic("AddIndexInfo: bug happened")
+		}
+
+		schemaVersion, err = updateSchemaVersionAndCollectionInfo(m, job, dbi, ci)
+		if err != nil {
+			return
+		}
+
+		job.RawArg = nil // will encode job.Arg into job.RawArg
+		job.SchemaState = osc.StateDeleteOnly
+
+	case osc.StateDeleteOnly:
+		// delete only -> write only
+		if ci == nil {
+			err = ErrIndexNotExists
+			failNow = true
+			return
+		}
+		iif.State = osc.StateWriteOnly
+		ok := ci.UpdateIndexInfo(iif)
+		if !ok {
+			panic("UpdateIndexInfo: bug happened")
+		}
+		schemaVersion, err = updateSchemaVersionAndCollectionInfo(m, job, dbi, ci)
+		if err != nil {
+			return
+		}
+		job.SchemaState = osc.StateWriteOnly
+	case osc.StateWriteOnly:
+		// write only -> reorganization
+		if ci == nil {
+			err = ErrIndexNotExists
+			failNow = true
+			return
+		}
+		iif.State = osc.StateWriteReorganization
+		ok := ci.UpdateIndexInfo(iif)
+		if !ok {
+			panic("UpdateIndexInfo: bug happened")
+		}
+		schemaVersion, err = updateSchemaVersionAndCollectionInfo(m, job, dbi, ci)
+		if err != nil {
+			return
+		}
+		job.SchemaState = osc.StateWriteReorganization
+	case osc.StateWriteReorganization:
+	default:
+		err = ErrInvalidDDLState
+		failNow = true
+		return
+	}
+
 	return
 }
 
@@ -230,7 +333,7 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 		}
 	}
 
-	schemaVersion, err = w.d.updateSchemaVersion(m, job)
+	schemaVersion, err = updateSchemaVersion(m, job)
 	if err != nil {
 		return
 	}
@@ -241,8 +344,28 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 
 }
 
+func updateSchemaVersionAndCollectionInfo(m *meta.Meta, job *model.Job, dbInfo *model.DBInfo, ci *model.CollectionInfo) (schemaVersion int64, err error) {
+	err = m.UpdateCollection(dbInfo.ID, ci)
+	if err != nil {
+		return
+	}
+	ok := dbInfo.UpdateCollectionInfo(ci)
+	if !ok {
+		panic("UpdateCollectionInfo: bug happened")
+	}
+	err = m.UpdateDatabase(dbInfo)
+	if err != nil {
+		return
+	}
+	schemaVersion, err = updateSchemaVersion(m, job)
+	if err != nil {
+		return
+	}
+	return
+}
+
 // updateSchemaVersion increments the schema version by 1 and sets SchemaDiff.
-func (d *DDL) updateSchemaVersion(m *meta.Meta, job *model.Job) (schemaVersion int64, err error) {
+func updateSchemaVersion(m *meta.Meta, job *model.Job) (schemaVersion int64, err error) {
 	schemaVersion, err = m.GenSchemaVersion()
 	if err != nil {
 		return
@@ -333,6 +456,8 @@ func job2CollectionIDs(job *model.Job) (collectionIDs []int64) {
 		for _, c := range dbInfo.Collections {
 			collectionIDs = append(collectionIDs, c.ID)
 		}
+	case model.ActionAddIndex:
+		collectionIDs = []int64{job.Arg.(*model.IndexInfo).JobRedundant.CID}
 	default:
 	}
 	return

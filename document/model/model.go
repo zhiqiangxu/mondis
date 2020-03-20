@@ -25,11 +25,19 @@ type (
 	}
 	// IndexInfo for index
 	IndexInfo struct {
-		ID      int64
-		Name    string
-		Columns []string
-		Unique  bool
-		State   osc.SchemaState
+		ID   int64
+		Name string
+		// Redundant may be empty, only set for job
+		JobRedundant *IndexInfoRedundant
+		Columns      []string
+		Unique       bool
+		State        osc.SchemaState
+	}
+	// IndexInfoRedundant stores some redundant info
+	IndexInfoRedundant struct {
+		Collection string
+		DB         string
+		CID        int64
 	}
 	// Job for a DDL operation
 	Job struct {
@@ -133,6 +141,16 @@ func (s JobState) String() string {
 	}
 }
 
+// UpdateCollectionInfo for existing collection
+func (db *DBInfo) UpdateCollectionInfo(ci *CollectionInfo) (ok bool) {
+	if db.Collections[ci.Name] == nil {
+		return
+	}
+	db.Collections[ci.Name] = ci
+	ok = true
+	return
+}
+
 // CollectionExists check whether collection exists
 func (db *DBInfo) CollectionExists(collectionName string) bool {
 	return db.Collections[collectionName] != nil
@@ -171,6 +189,34 @@ func (c *CollectionInfo) Clone() *CollectionInfo {
 	return &clone
 }
 
+// UpdateIndexInfo for update index info
+func (c *CollectionInfo) UpdateIndexInfo(iif *IndexInfo) (ok bool) {
+	if c.Indices[iif.Name] == nil {
+		return
+	}
+
+	c.Indices[iif.Name] = iif.Clone()
+	ok = true
+	return
+}
+
+// AddIndexInfo adds an index to collection
+func (c *CollectionInfo) AddIndexInfo(iif *IndexInfo) (ok bool) {
+	if c.Indices[iif.Name] != nil {
+		return
+	}
+
+	c.Indices[iif.Name] = iif.Clone()
+	c.IndexOrder = append(c.IndexOrder, iif.Name)
+	ok = true
+	return
+}
+
+// IndexInfo returns the index info by name
+func (c *CollectionInfo) IndexInfo(indexName string) *IndexInfo {
+	return c.Indices[indexName]
+}
+
 // IndexExists checks whether index exists
 func (c *CollectionInfo) IndexExists(indexName string) bool {
 	return c.Indices[indexName] != nil
@@ -179,6 +225,10 @@ func (c *CollectionInfo) IndexExists(indexName string) bool {
 // Clone IndexInfo
 func (ii *IndexInfo) Clone() *IndexInfo {
 	clone := *ii
+	if clone.JobRedundant != nil {
+		redundant := *clone.JobRedundant
+		clone.JobRedundant = &redundant
+	}
 	clone.Columns = make([]string, len(ii.Columns))
 	for i, name := range ii.Columns {
 		clone.Columns[i] = name
@@ -227,6 +277,16 @@ func (job *Job) IsDone() bool {
 // IsCancelled returns whether job is canceled.
 func (job *Job) IsCancelled() bool {
 	return job.State == JobStateCancelled
+}
+
+// IsRollingback returns whether the job is rolling back or not.
+func (job *Job) IsRollingback() bool {
+	return job.State == JobStateRollingback
+}
+
+// IsCancelling returns whether the job is cancelling or not.
+func (job *Job) IsCancelling() bool {
+	return job.State == JobStateCancelling
 }
 
 // IsFinished returns whether job is finished or not.

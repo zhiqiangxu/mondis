@@ -15,6 +15,16 @@ var (
 	ErrJobsInQueueExceeded = errors.New("ddl jobs in queue exceeded")
 	// ErrDBAlreadyExists used by DDL
 	ErrDBAlreadyExists = errors.New("db already exists")
+	// ErrCollectionNotExists used by DDL
+	ErrCollectionNotExists = errors.New("collection not exists")
+	// ErrDBNotExists used by DDL
+	ErrDBNotExists = errors.New("db not exists")
+	// ErrIndexAlreadyExists used by DDL
+	ErrIndexAlreadyExists = errors.New("index already exists")
+	// ErrIndexNotExists used by DDL
+	ErrIndexNotExists = errors.New("index not exists")
+	// ErrInvalidDDLState used by DDL
+	ErrInvalidDDLState = errors.New("invalid ddl state")
 )
 
 // DDL is responsible for updating schema in data store and maintaining in-memory schema cache.

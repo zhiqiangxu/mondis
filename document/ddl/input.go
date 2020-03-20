@@ -104,16 +104,16 @@ type AddIndexInput struct {
 }
 
 // Validate AddIndexInput
-func (in *AddIndexInput) Validate() (err error) {
-	if in.DB == "" {
+func (aii *AddIndexInput) Validate() (err error) {
+	if aii.DB == "" {
 		err = fmt.Errorf("db empty")
 		return
 	}
-	if in.Collection == "" {
+	if aii.Collection == "" {
 		err = fmt.Errorf("collection empty")
 		return
 	}
-	err = in.IndexInfo.Validate()
+	err = aii.IndexInfo.Validate()
 	return
 }
 
