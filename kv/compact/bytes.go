@@ -4,12 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/zhiqiangxu/util"
+	"github.com/zhiqiangxu/util/bytes"
 )
 
 // EncodeBytes for encode []byte in a compact way
 func EncodeBytes(b []byte, data []byte) []byte {
-	b = util.ReallocBytes(b, binary.MaxVarintLen64+len(data))
+	b = bytes.Realloc(b, binary.MaxVarintLen64+len(data))
 	b = EncodeVarint(b, int64(len(data)))
 	return append(b, data...)
 }

@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/zhiqiangxu/util"
+	"github.com/zhiqiangxu/util/bytes"
 )
 
 const (
@@ -31,7 +31,7 @@ var (
 func EncodeBytes(b []byte, data []byte) []byte {
 	dLen := len(data)
 	reallocSize := (dLen/encGroupSize + 1) * (encGroupSize + 1)
-	result := util.ReallocBytes(b, reallocSize)
+	result := bytes.Realloc(b, reallocSize)
 	for idx := 0; idx <= dLen; idx += encGroupSize {
 		remain := dLen - idx
 		padCount := 0
