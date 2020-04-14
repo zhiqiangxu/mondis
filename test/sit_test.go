@@ -239,6 +239,16 @@ func TestDocument(t *testing.T) {
 		if min != did1 || max != did2 {
 			t.Fatal("GetDidRange result not expected")
 		}
+
+		n, err := c.Count(nil)
+		if err != nil || n != 2 {
+			t.Fatal("Count")
+		}
+
+		docs, err := c.GetAll(nil)
+		if err != nil || len(docs) != 2 {
+			t.Fatal("GetAll")
+		}
 	}
 
 	n, err := c.DeleteAll(nil)

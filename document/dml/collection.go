@@ -330,6 +330,47 @@ func (c *Collection) GetDidRange(t *txn.Txn) (min, max int64, err error) {
 	return
 }
 
+// GetAll returns all docs
+func (c *Collection) GetAll(t *txn.Txn) (datas []bson.M, err error) {
+	origT := t
+
+	if t == nil {
+		t = c.Txn(false)
+		defer t.Discard()
+	}
+
+	ci := t.StartMetaCache().CollectionInfo(c.dbName, c.collectionName)
+	if ci == nil {
+		err = ErrCollectionNotExists
+		return
+	}
+
+	if origT != nil {
+		origT.ReferredCollections(ci.ID)
+	}
+
+	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, ci.ID)
+	scanErr := t.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
+		var data bson.M
+		err = bson.Unmarshal(value, &data)
+		if err != nil {
+			return false
+		}
+
+		datas = append(datas, data)
+		return true
+	})
+	if err != nil {
+		return
+	}
+	if scanErr != nil {
+		err = scanErr
+		return
+	}
+
+	return
+}
+
 // Count for total number of documents
 func (c *Collection) Count(t *txn.Txn) (n int, err error) {
 
