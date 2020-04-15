@@ -2,6 +2,7 @@ package dml
 
 import (
 	"errors"
+	"reflect"
 
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/document/model"
@@ -43,7 +44,7 @@ func (c *Collection) Index(name string) (idx *Index, err error) {
 }
 
 // InsertOne for insert a document into collection
-func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
+func (c *Collection) InsertOne(doc interface{}, t *txn.Txn) (did int64, err error) {
 	data, err := bson.Marshal(doc)
 	if err != nil {
 		return
@@ -94,21 +95,21 @@ func (c *Collection) InsertOne(doc bson.M, t *txn.Txn) (did int64, err error) {
 }
 
 // InsertOneManaged for insert a new document with specified document id
-func (c *Collection) InsertOneManaged(did int64, doc bson.M, t *txn.Txn) (err error) {
+func (c *Collection) InsertOneManaged(did int64, doc interface{}, t *txn.Txn) (err error) {
 
 	_, _, err = c.updateOne(did, doc, updateForInsert, t)
 	return
 }
 
 // UpdateOne for update an existing document in collection
-func (c *Collection) UpdateOne(did int64, doc bson.M, t *txn.Txn) (exists bool, err error) {
+func (c *Collection) UpdateOne(did int64, doc interface{}, t *txn.Txn) (exists bool, err error) {
 
 	exists, _, err = c.updateOne(did, doc, updateForUpdate, t)
 	return
 }
 
 // UpsertOne for upsert an existing document in collection
-func (c *Collection) UpsertOne(did int64, doc bson.M, t *txn.Txn) (isNew bool, err error) {
+func (c *Collection) UpsertOne(did int64, doc interface{}, t *txn.Txn) (isNew bool, err error) {
 
 	_, isNew, err = c.updateOne(did, doc, updateForUpsert, t)
 	return
@@ -149,7 +150,7 @@ const (
 	updateForInsert
 )
 
-func (c *Collection) updateOne(did int64, doc bson.M, updateFor int8, t *txn.Txn) (existsForUpdate, isNewForUpsert bool, err error) {
+func (c *Collection) updateOne(did int64, doc interface{}, updateFor int8, t *txn.Txn) (existsForUpdate, isNewForUpsert bool, err error) {
 	data, err := bson.Marshal(doc)
 	if err != nil {
 		return
@@ -207,7 +208,7 @@ func (c *Collection) updateOne(did int64, doc bson.M, updateFor int8, t *txn.Txn
 }
 
 // GetOne for get a document by document id
-func (c *Collection) GetOne(did int64, t *txn.Txn) (data bson.M, err error) {
+func (c *Collection) GetOne(did int64, data interface{}, t *txn.Txn) (err error) {
 
 	origT := t
 
@@ -236,12 +237,15 @@ func (c *Collection) GetOne(did int64, t *txn.Txn) (data bson.M, err error) {
 		return
 	}
 
-	err = bson.Unmarshal(v, &data)
+	err = bson.Unmarshal(v, data)
 	return
 }
 
 // GetMany for get many documents by document id list
-func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err error) {
+func (c *Collection) GetMany(dids []int64, slicePtr interface{}, t *txn.Txn) (err error) {
+
+	et := reflect.TypeOf(slicePtr).Elem().Elem()
+	slice := reflect.Indirect(reflect.ValueOf(slicePtr))
 
 	origT := t
 
@@ -271,13 +275,15 @@ func (c *Collection) GetMany(dids []int64, t *txn.Txn) (datas []bson.M, err erro
 		if err != nil {
 			return
 		}
-		var data bson.M
-		err = bson.Unmarshal(v, &data)
+
+		item := reflect.New(et)
+		ptr := item.Interface()
+		err = bson.Unmarshal(v, ptr)
 		if err != nil {
 			return
 		}
 
-		datas = append(datas, data)
+		slice.Set(reflect.Append(slice, reflect.Indirect(item)))
 	}
 
 	return
@@ -331,7 +337,10 @@ func (c *Collection) GetDidRange(t *txn.Txn) (min, max int64, err error) {
 }
 
 // GetAll returns all docs
-func (c *Collection) GetAll(t *txn.Txn) (datas []bson.M, err error) {
+func (c *Collection) GetAll(slicePtr interface{}, t *txn.Txn) (err error) {
+	et := reflect.TypeOf(slicePtr).Elem().Elem()
+	slice := reflect.Indirect(reflect.ValueOf(slicePtr))
+
 	origT := t
 
 	if t == nil {
@@ -351,13 +360,14 @@ func (c *Collection) GetAll(t *txn.Txn) (datas []bson.M, err error) {
 
 	collectionDocumentPrefix := AppendCollectionDocumentPrefix(nil, ci.ID)
 	scanErr := t.Scan(mondis.ProviderScanOption{Prefix: collectionDocumentPrefix}, func(key []byte, value []byte, _ mondis.VMetaResp) bool {
-		var data bson.M
-		err = bson.Unmarshal(value, &data)
+		item := reflect.New(et)
+		ptr := item.Interface()
+		err = bson.Unmarshal(value, ptr)
 		if err != nil {
 			return false
 		}
 
-		datas = append(datas, data)
+		slice.Set(reflect.Append(slice, reflect.Indirect(item)))
 		return true
 	})
 	if err != nil {

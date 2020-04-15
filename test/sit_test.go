@@ -245,8 +245,14 @@ func TestDocument(t *testing.T) {
 			t.Fatal("Count")
 		}
 
-		docs, err := c.GetAll(nil)
-		if err != nil || len(docs) != 2 {
+		var result []bson.M
+		err = c.GetMany([]int64{did1, did2}, &result, nil)
+		if err != nil || len(result) != 2 {
+			t.Fatal("GetMany")
+		}
+		result = nil
+		err = c.GetAll(&result, nil)
+		if err != nil || len(result) != 2 {
 			t.Fatal("GetAll")
 		}
 	}
@@ -262,7 +268,8 @@ func TestDocument(t *testing.T) {
 		t.Fatal("c.InsertOne", err)
 	}
 
-	data, err := c.GetOne(did, nil)
+	var data bson.M
+	err = c.GetOne(did, &data, nil)
 	if err != nil {
 		t.Fatal("c.GetOne", err)
 	}
@@ -275,7 +282,7 @@ func TestDocument(t *testing.T) {
 		t.Fatal("c.InsertOne", err, updated)
 	}
 
-	data, err = c.GetOne(did, nil)
+	err = c.GetOne(did, &data, nil)
 	if err != nil {
 		t.Fatal("c.GetOne", err)
 	}
@@ -306,7 +313,7 @@ func TestDocument(t *testing.T) {
 		t.Fatal("c.DeleteOne", err)
 	}
 
-	_, err = c.GetOne(did, nil)
+	err = c.GetOne(did, nil, nil)
 	if err != dml.ErrDocNotFound {
 		t.Fatal("err != dml.ErrDocNotFound", err)
 	}
