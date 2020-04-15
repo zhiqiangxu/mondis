@@ -49,6 +49,8 @@ func (w *worker) start() {
 		err := w.handleJobQueue()
 		if err != nil {
 			logger.Instance().Error("handleJobQueue", zap.Error(err))
+		} else {
+			logger.Instance().Info("handleJobQueue OK")
 		}
 	}
 }
