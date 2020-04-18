@@ -63,15 +63,15 @@ const (
 func (w *worker) handleJobQueue() (err error) {
 
 	var (
-		nojob         bool
-		schemaVersion int64
-		failNow       bool
-		runJobErr     error
-		cancelFunc    func()
-		job           *model.Job
+		nojob               bool
+		schemaVersion       int64
+		failNow             bool
+		runJobErr           error
+		afterCommitFunc4Job func()
+		job                 *model.Job
 	)
 	for {
-		err = util.RunInNewUpdateTxnWithCancel(w.d.kvdb, func(txn mondis.ProviderTxn) (err error) {
+		err = util.RunInNewUpdateTxnWithCallback(w.d.kvdb, func(txn mondis.ProviderTxn) (err error) {
 			m := meta.NewMeta(txn)
 
 			job, err = w.getFirstJob(m)
@@ -92,7 +92,7 @@ func (w *worker) handleJobQueue() (err error) {
 			}
 
 			util2.RunWithRecovery(func() {
-				schemaVersion, cancelFunc, failNow, runJobErr = w.runJob(m, job)
+				schemaVersion, afterCommitFunc4Job, failNow, runJobErr = w.runJob(m, job)
 			}, func(interface{}) {
 				job.State = model.JobStateCancelling
 			})
@@ -115,8 +115,12 @@ func (w *worker) handleJobQueue() (err error) {
 			err = w.updateJob(m, job)
 			return
 		}, func() {
-			cancelFunc()
+			if afterCommitFunc4Job != nil {
+				afterCommitFunc4Job()
+			}
 		})
+		afterCommitFunc4Job = nil
+
 		if nojob {
 			return
 		}
@@ -139,7 +143,7 @@ func (w *worker) handleJobQueue() (err error) {
 	}
 }
 
-func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
+func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, afterCommitFunc4Job func(), failNow bool, err error) {
 	if job.IsFinished() {
 		return
 	}
@@ -150,9 +154,9 @@ func (w *worker) runJob(m *meta.Meta, job *model.Job) (schemaVersion int64, canc
 
 	switch job.Type {
 	case model.ActionCreateSchema:
-		schemaVersion, cancelFunc, failNow, err = w.onCreateSchema(m, job)
+		schemaVersion, afterCommitFunc4Job, failNow, err = w.onCreateSchema(m, job)
 	case model.ActionAddIndex:
-		schemaVersion, cancelFunc, failNow, err = w.onAddIndex(m, job)
+		schemaVersion, afterCommitFunc4Job, failNow, err = w.onAddIndex(m, job)
 	default:
 		// Invalid job, cancel it.
 		job.State = model.JobStateCancelled
@@ -182,7 +186,7 @@ func (w *worker) getFirstJob(m *meta.Meta) (job *model.Job, err error) {
 	return
 }
 
-func (w *worker) onAddIndex(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
+func (w *worker) onAddIndex(m *meta.Meta, job *model.Job) (schemaVersion int64, afterCommitFunc4Job func(), failNow bool, err error) {
 	indexInfo := &model.IndexInfo{}
 	if err = job.DecodeArg(indexInfo); err != nil {
 		job.State = model.JobStateCancelled
@@ -279,7 +283,7 @@ func (w *worker) onAddIndex(m *meta.Meta, job *model.Job) (schemaVersion int64, 
 	return
 }
 
-func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, cancelFunc func(), failNow bool, err error) {
+func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int64, afterCommitFunc4Job func(), failNow bool, err error) {
 
 	dbInfo := &model.DBInfo{}
 	if err = job.DecodeArg(dbInfo); err != nil {
@@ -296,29 +300,9 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 		err = ErrDBAlreadyExists
 		return
 	}
-	cf := func() {
-		for _, collection := range dbInfo.Collections {
-			util2.TryUntilSuccess(func() bool {
-				dropErr := dml.DropSequenceIfExists(collection.ID)
-				if dropErr != nil {
-					logger.Instance().Error("DropSequenceIfExists", zap.Int64("cid", collection.ID), zap.Error(dropErr))
-				}
-				return dropErr == nil
-			}, time.Second)
-		}
-	}
-	defer func() {
-		if err != nil {
-			cf()
-		}
-	}()
 
 	dbInfo.State = osc.StatePublic
 	for _, collection := range dbInfo.Collections {
-		err = dml.CreateSequence(w.d.kvdb, dbInfo.ID, collection.ID, 0)
-		if err != nil {
-			return
-		}
 		collection.State = osc.StatePublic
 		for _, index := range collection.Indices {
 			index.State = osc.StatePublic
@@ -341,7 +325,17 @@ func (w *worker) onCreateSchema(m *meta.Meta, job *model.Job) (schemaVersion int
 	}
 	job.FinishDBJob(model.JobStateDone, osc.StatePublic, schemaVersion, dbInfo)
 
-	cancelFunc = cf
+	afterCommitFunc4Job = func() {
+		for _, collection := range dbInfo.Collections {
+			util2.TryUntilSuccess(func() bool {
+				err = dml.CreateSequence(w.d.kvdb, dbInfo.ID, collection.ID, 0)
+				if err != nil {
+					logger.Instance().Error("CreateSequence", zap.Int64("dbid", dbInfo.ID), zap.Int64("cid", collection.ID), zap.Error(err))
+				}
+				return err == nil
+			}, time.Second)
+		}
+	}
 	return
 
 }

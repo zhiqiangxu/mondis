@@ -49,6 +49,23 @@ func RunInNewUpdateTxnWithCancel(kvdb mondis.KVDB, f func(mondis.ProviderTxn) er
 	return
 }
 
+// RunInNewUpdateTxnWithCallback will call afterCommitFunc after Commit succeeded
+func RunInNewUpdateTxnWithCallback(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error, afterCommitFunc func()) (err error) {
+	txn := kvdb.NewTransaction(true)
+	defer txn.Discard()
+
+	err = f(txn)
+	if err != nil {
+		return
+	}
+
+	err = txn.Commit()
+	if err == nil && afterCommitFunc != nil {
+		afterCommitFunc()
+	}
+	return
+}
+
 // RunInNewUpdateTxn for run f in a new update transaction
 func RunInNewUpdateTxn(kvdb mondis.KVDB, f func(mondis.ProviderTxn) error) (err error) {
 	txn := kvdb.NewTransaction(true)
