@@ -205,6 +205,9 @@ func TestDocument(t *testing.T) {
 	}
 
 	do := domain.NewDomain(kvdb)
+	if do.Init() != nil {
+		t.Fatal("Init")
+	}
 	_, err = do.DDL().CreateSchema(context.Background(), ddl.CreateSchemaInput{DB: "db", Collections: []string{"c"}})
 	if err != nil {
 		t.Fatal("CreateSchema", err)

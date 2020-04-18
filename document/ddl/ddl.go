@@ -4,6 +4,9 @@ import (
 	"errors"
 
 	"github.com/zhiqiangxu/mondis"
+	"github.com/zhiqiangxu/mondis/document/dml"
+	"github.com/zhiqiangxu/mondis/document/meta"
+	"github.com/zhiqiangxu/mondis/util"
 )
 
 const (
@@ -42,8 +45,6 @@ func New(kvdb mondis.KVDB, options Options) *DDL {
 		workers: make(map[workerType]*worker),
 	}
 
-	ddl.start()
-
 	return ddl
 }
 
@@ -53,4 +54,31 @@ func (d *DDL) start() {
 	for _, w := range d.workers {
 		go w.start()
 	}
+}
+
+// Init DDL
+func (d *DDL) Init() (err error) {
+	err = util.RunInNewUpdateTxn(d.kvdb, func(txn mondis.ProviderTxn) (err error) {
+		m := meta.NewMeta(txn)
+		dbs, err := m.ListDatabases()
+		if err != nil {
+			return
+		}
+
+		for _, db := range dbs {
+			for _, ci := range db.Collections {
+				err = dml.CreateSequence(d.kvdb, db.ID, ci.ID, 0)
+				if err != nil {
+					return
+				}
+			}
+		}
+		return
+	})
+
+	if err != nil {
+		return
+	}
+	d.start()
+	return
 }

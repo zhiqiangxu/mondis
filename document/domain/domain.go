@@ -30,20 +30,28 @@ func NewDomain(kvdb mondis.KVDB) *Domain {
 		handle: schema.NewHandle(),
 		kvdb:   kvdb,
 	}
-	do.init()
 	return do
 }
 
-func (do *Domain) init() {
+// Init Domain
+func (do *Domain) Init() (err error) {
 
-	err := do.reload()
+	err = do.reload()
 	if err != nil {
-		logger.Instance().Fatal("reload", zap.Error(err))
+		logger.Instance().Error("Domain.Init reload", zap.Error(err))
+		return
 	}
 
 	callback := ddl.Callback{OnChanged: do.onChange}
-	do.ddl = ddl.New(do.kvdb, ddl.Options{Callback: callback})
+	ddl := ddl.New(do.kvdb, ddl.Options{Callback: callback})
+	err = ddl.Init()
+	if err != nil {
+		logger.Instance().Error("Domain.Init ddl.Init", zap.Error(err))
+		return
+	}
+	do.ddl = ddl
 	go do.reloadInLoop()
+	return
 }
 
 func (do *Domain) onChange(err error) {
