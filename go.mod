@@ -10,4 +10,5 @@ require (
 	github.com/zhiqiangxu/util v0.0.0-20200325101007-74f059bfa75e
 	go.mongodb.org/mongo-driver v1.3.0
 	go.uber.org/zap v1.13.0
+	gotest.tools v2.2.0+incompatible
 )

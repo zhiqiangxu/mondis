@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"reflect"
+
 	"github.com/zhiqiangxu/mondis"
 	"github.com/zhiqiangxu/mondis/client"
 	"github.com/zhiqiangxu/mondis/document/ddl"
@@ -18,6 +20,7 @@ import (
 	"github.com/zhiqiangxu/mondis/server"
 	"github.com/zhiqiangxu/mondis/structure"
 	"go.mongodb.org/mongo-driver/bson"
+	"gotest.tools/assert"
 )
 
 const (
@@ -519,4 +522,34 @@ func TestHash(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
+
+func TestWB(t *testing.T) {
+
+	providers := []func() mondis.KVDB{
+		provider.NewBadger, provider.NewLevelDB,
+	}
+
+	for _, provider := range providers {
+		{
+			os.RemoveAll(dataDir)
+			kvdb := provider()
+			err := kvdb.Open(mondis.KVOption{Dir: dataDir})
+			assert.Assert(t, err == nil)
+
+			b := kvdb.WriteBatch()
+			k := []byte("k")
+			v := []byte("v")
+			err = b.Set(k, v)
+			assert.Assert(t, err == nil)
+			err = b.Commit()
+			assert.Assert(t, err == nil)
+
+			vget, _, err := kvdb.Get(k)
+			assert.Assert(t, err == nil && reflect.DeepEqual(vget, v))
+
+			assert.Assert(t, kvdb.Close() == nil)
+		}
+	}
+
 }

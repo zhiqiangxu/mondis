@@ -9,6 +9,7 @@ type (
 		ProviderKVOP
 		Open(option KVOption) error
 		Close() error
+		WriteBatch() ProviderWriteBatch
 		NewTransaction(update bool) ProviderTxn
 	}
 
@@ -19,7 +20,15 @@ type (
 		Scan(option ProviderScanOption, fn func(key []byte, value []byte, meta VMetaResp) bool) error
 	}
 
-	// ProviderTxn for Txn for provider
+	// ProviderWriteBatch is WriteBatch for provider
+	ProviderWriteBatch interface {
+		Set(k, v []byte) error
+		Delete(key []byte) error
+		Commit() error
+		Discard()
+	}
+
+	// ProviderTxn is Txn for provider
 	ProviderTxn interface {
 		ProviderKVOP
 		StartTS() uint64 // not used yet

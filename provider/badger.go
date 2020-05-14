@@ -95,6 +95,11 @@ func (b *Badger) Scan(option mondis.ProviderScanOption, fn func(key []byte, valu
 	return
 }
 
+// WriteBatch creates a new mondis.ProviderWriteBatch
+func (b *Badger) WriteBatch() mondis.ProviderWriteBatch {
+	return (*badgerWB)(b.db.NewWriteBatch())
+}
+
 func scanByBadgerTxn(txn *badger.Txn, option mondis.ProviderScanOption, fn func(key []byte, value []byte, meta mondis.VMetaResp) bool) (err error) {
 	iterOpts := badger.DefaultIteratorOptions
 	iterOpts.Reverse = option.Reverse

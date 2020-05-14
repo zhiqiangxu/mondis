@@ -117,3 +117,8 @@ func (l *LevelDB) Scan(option mondis.ProviderScanOption, fn func(key []byte, val
 
 	return
 }
+
+// WriteBatch creates a new mondis.ProviderWriteBatch
+func (l *LevelDB) WriteBatch() mondis.ProviderWriteBatch {
+	return &leveldbWB{db: l.db, batch: new(leveldb.Batch)}
+}
