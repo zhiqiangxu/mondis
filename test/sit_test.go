@@ -49,34 +49,25 @@ func TestBadger(t *testing.T) {
 		{
 			// test Exists
 			exists, err := c.Exists(nonExistingKey)
-			if err != nil || exists {
-				t.Fatal("Exists nonExistingKey1")
-			}
+			assert.Assert(t, err == nil && !exists)
+
 			// test Set
 			key1 := []byte("key1")
 			value1 := []byte("value1")
 			err = c.Set(key1, value1, nil)
-			if err != nil {
-				t.Fatal("Set key1")
-			}
+			assert.Assert(t, err == nil)
 
 			// test Get
 			v, _, err := c.Get(key1)
-			if err != nil || !bytes.Equal(v, value1) {
-				t.Fatal("Get key1")
-			}
+			assert.Assert(t, err == nil && bytes.Equal(v, value1))
 
 			// test Delete
 			err = c.Delete(key1)
-			if err != nil {
-				t.Fatal("Delete key1", err)
-			}
+			assert.Assert(t, err == nil)
 
 			// test Get when key not exists
 			_, _, err = c.Get(key1)
-			if err != kv.ErrKeyNotFound {
-				t.Fatal("Get key1")
-			}
+			assert.Assert(t, err == kv.ErrKeyNotFound)
 		}
 
 		{
@@ -85,35 +76,23 @@ func TestBadger(t *testing.T) {
 			value2 := []byte("value2")
 			err := c.Update(func(txn mondis.Txn) error {
 				err := txn.Set(key2, value2, nil)
-				if err != nil {
-					t.Fatal("Update.Set key2")
-				}
+				assert.Assert(t, err == nil)
 
 				v, _, err := txn.Get(key2)
-				if err != nil || !bytes.Equal(v, value2) {
-					t.Fatal("Update.Get key2")
-				}
+				assert.Assert(t, err == nil && bytes.Equal(v, value2))
 
 				err = txn.Delete(key2)
-				if err != nil {
-					t.Fatal("Update.Delete key2")
-				}
+				assert.Assert(t, err == nil)
 
 				_, _, err = txn.Get(key2)
-				if err != kv.ErrKeyNotFound {
-					t.Fatal("Update.Get key2")
-				}
+				assert.Assert(t, err == kv.ErrKeyNotFound)
 
 				// test Exists
 				exists, err := txn.Exists(nonExistingKey)
-				if err != nil || exists {
-					t.Fatal("Exists nonExistingKey2")
-				}
+				assert.Assert(t, err == nil && !exists)
 				return nil
 			})
-			if err != nil {
-				t.Fatal("Update", err)
-			}
+			assert.Assert(t, err == nil)
 		}
 
 		{
@@ -121,29 +100,19 @@ func TestBadger(t *testing.T) {
 			key3 := []byte("key3")
 			value3 := []byte("value3")
 			err := c.Set(key3, value3, nil)
-			if err != nil {
-				t.Fatal("Set key3", err)
-			}
+			assert.Assert(t, err == nil)
 			err = c.View(func(txn mondis.Txn) error {
 				v, _, err := txn.Get(key3)
-				if err != nil || !bytes.Equal(v, value3) {
-					t.Fatal("View Get key3", err)
-				}
+				assert.Assert(t, err == nil && bytes.Equal(v, value3))
 
 				// test Exists
 				exists, err := txn.Exists(nonExistingKey)
-				if err != nil || exists {
-					t.Fatal("Exists nonExistingKey3")
-				}
+				assert.Assert(t, err == nil && !exists)
 				return nil
 			})
-			if err != nil {
-				t.Fatal("View", err)
-			}
+			assert.Assert(t, err == nil)
 			err = c.Delete(key3)
-			if err != nil {
-				t.Fatal("Delete key3", err)
-			}
+			assert.Assert(t, err == nil)
 		}
 
 		{
@@ -152,9 +121,7 @@ func TestBadger(t *testing.T) {
 			n := 10
 			for i := 0; i < n; i++ {
 				err := c.Set([]byte(fmt.Sprintf("%s:%d", prefix, i)), []byte{(byte(i))}, nil)
-				if err != nil {
-					t.Fatal("Set", err)
-				}
+				assert.Assert(t, err == nil)
 			}
 
 			var (
@@ -178,18 +145,11 @@ func TestBadger(t *testing.T) {
 					})
 				}
 
-				if err != nil {
-					t.Fatal("Scan", err)
-				}
-				if len(entries) != (n - 1) {
-					t.Fatal("entry count not expected")
-				}
+				assert.Assert(t, err == nil && len(entries) == (n-1))
 
 				// scan result should be from low to high
 				for i, entry := range entries {
-					if !bytes.Equal(entry.Key, []byte(fmt.Sprintf("%s:%d", prefix, i))) {
-						t.Fatal("entry not expected", i)
-					}
+					assert.Assert(t, bytes.Equal(entry.Key, []byte(fmt.Sprintf("%s:%d", prefix, i))))
 				}
 			}
 
@@ -203,126 +163,72 @@ func TestDocument(t *testing.T) {
 	os.RemoveAll(dataDir)
 	kvdb := provider.NewBadger()
 	err := kvdb.Open(mondis.KVOption{Dir: dataDir})
-	if err != nil {
-		t.Fatal("kvdb.Open", err)
-	}
+	assert.Assert(t, err == nil)
 
 	do := domain.NewDomain(kvdb)
-	if do.Init() != nil {
-		t.Fatal("Init")
-	}
+	assert.Assert(t, do.Init() == nil)
 	_, err = do.DDL().CreateSchema(context.Background(), ddl.CreateSchemaInput{DB: "db", Collections: []string{"c"}})
-	if err != nil {
-		t.Fatal("CreateSchema", err)
-	}
+	assert.Assert(t, err == nil)
 	db, err := do.DB("db")
-	if err != nil {
-		t.Fatal("DB", err)
-	}
+	assert.Assert(t, err == nil)
 
 	c, err := db.Collection("c")
-	if err != nil {
-		t.Fatal("db.Collection", err)
-	}
+	assert.Assert(t, err == nil)
 
 	// test GetDidRange before DeleteAll
 	{
 		key := "key range"
 		did1, err := c.InsertOne(bson.M{key: "value"}, nil)
-		if err != nil {
-			t.Fatal("c.InsertOne", err)
-		}
+		assert.Assert(t, err == nil)
 		did2, err := c.InsertOne(bson.M{key: "value"}, nil)
-		if err != nil {
-			t.Fatal("c.InsertOne", err)
-		}
+		assert.Assert(t, err == nil)
 
 		min, max, err := c.GetDidRange(nil)
-		if err != nil {
-			t.Fatal("c.GetDidRange", err)
-		}
-
-		if min != did1 || max != did2 {
-			t.Fatal("GetDidRange result not expected")
-		}
+		assert.Assert(t, err == nil && min == did1 && max == did2)
 
 		n, err := c.Count(nil)
-		if err != nil || n != 2 {
-			t.Fatal("Count")
-		}
+		assert.Assert(t, err == nil && n == 2)
 
 		var result []bson.M
 		err = c.GetMany([]int64{did1, did2}, &result, nil)
-		if err != nil || len(result) != 2 {
-			t.Fatal("GetMany")
-		}
+		assert.Assert(t, err == nil && len(result) == 2)
 		result = nil
 		err = c.GetAll(&result, nil)
-		if err != nil || len(result) != 2 {
-			t.Fatal("GetAll")
-		}
+		assert.Assert(t, err == nil && len(result) == 2)
 	}
 
 	n, err := c.DeleteAll(nil)
-	if err != nil {
-		t.Fatal("c.DeleteAll", err, n)
-	}
+	assert.Assert(t, err == nil)
 
 	key := "key"
 	did, err := c.InsertOne(bson.M{key: "value"}, nil)
-	if err != nil {
-		t.Fatal("c.InsertOne", err)
-	}
+	assert.Assert(t, err == nil)
 
 	var data bson.M
 	err = c.GetOne(did, &data, nil)
-	if err != nil {
-		t.Fatal("c.GetOne", err)
-	}
-	if data[key] != "value" {
-		t.Fatal("data[key] != \"value\"")
-	}
+	assert.Assert(t, err == nil && data[key] == "value")
 
 	updated, err := c.UpdateOne(did, bson.M{key: "value2"}, nil)
-	if err != nil || !updated {
-		t.Fatal("c.InsertOne", err, updated)
-	}
+	assert.Assert(t, err == nil && updated)
 
 	err = c.GetOne(did, &data, nil)
-	if err != nil {
-		t.Fatal("c.GetOne", err)
-	}
-	if data[key] != "value2" {
-		t.Fatal("data[key] != \"value2\"")
-	}
+	assert.Assert(t, err == nil && data[key] == "value2")
 
 	n, err = c.Count(nil)
-	if err != nil || n != 1 {
-		t.Fatal("c.Count")
-	}
+	assert.Assert(t, err == nil && n == 1)
 
 	err = c.DeleteOne(did, nil)
-	if err != nil {
-		t.Fatal("c.DeleteOne", err)
-	}
+	assert.Assert(t, err == nil)
 
 	err = c.InsertOneManaged(1000, bson.M{key: "value"}, nil)
-	if err != nil {
-		t.Fatal("c.InsertOneManaged", err)
-	}
+	assert.Assert(t, err == nil)
 	n, err = c.Count(nil)
-	if err != nil || n != 1 {
-		t.Fatal("c.Count")
-	}
+	assert.Assert(t, err == nil && n == 1)
 	err = c.DeleteOne(1000, nil)
-	if err != nil {
-		t.Fatal("c.DeleteOne", err)
-	}
+	assert.Assert(t, err == nil)
 
 	err = c.GetOne(did, nil, nil)
-	if err != dml.ErrDocNotFound {
-		t.Fatal("err != dml.ErrDocNotFound", err)
-	}
+	assert.Assert(t, err == dml.ErrDocNotFound)
 
 	// {
 	// 	// test index
@@ -370,76 +276,42 @@ func TestDocument(t *testing.T) {
 func TestList(t *testing.T) {
 	kvdb := provider.NewBadger()
 	err := kvdb.Open(mondis.KVOption{Dir: dataDir})
-	if err != nil {
-		t.Fatal("kvdb.Open", err)
-	}
+	assert.Assert(t, err == nil)
 	defer kvdb.Close()
 
 	txn := kvdb.NewTransaction(true)
 	txStruct := structure.New(txn, []byte("l"))
 	list1 := []byte("list1")
 	l, err := txStruct.LLen(list1)
-	if err != nil || l != 0 {
-		t.Fatal(err, l)
-	}
+	assert.Assert(t, err == nil && l == 0)
 
 	err = txStruct.LPush(list1, []byte("item1"), []byte("item2"))
-	if err != nil {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil)
 	l, err = txStruct.LLen(list1)
-	if err != nil || l != 2 {
-		t.Fatal(err, l)
-	}
+	assert.Assert(t, err == nil && l == 2)
 
 	item, err := txStruct.LPop(list1)
-	if err != nil {
-		t.FailNow()
-	}
-	if !bytes.Equal(item, []byte("item2")) {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil && bytes.Equal(item, []byte("item2")))
+
 	item, err = txStruct.LPop(list1)
-	if err != nil {
-		t.FailNow()
-	}
-	if !bytes.Equal(item, []byte("item1")) {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil && bytes.Equal(item, []byte("item1")))
 
 	err = txStruct.RPush(list1, []byte("item1"), []byte("item2"))
-	if err != nil {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil)
 	l, err = txStruct.LLen(list1)
-	if err != nil || l != 2 {
-		t.Fatal(err, l)
-	}
+	assert.Assert(t, err == nil && l == 2)
 
 	item, err = txStruct.LPop(list1)
-	if err != nil {
-		t.FailNow()
-	}
-	if !bytes.Equal(item, []byte("item1")) {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil && bytes.Equal(item, []byte("item1")))
+
 	item, err = txStruct.LPop(list1)
-	if err != nil {
-		t.FailNow()
-	}
-	if !bytes.Equal(item, []byte("item2")) {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil && bytes.Equal(item, []byte("item2")))
 
 	l, err = txStruct.LLen(list1)
-	if err != nil || l != 0 {
-		t.Fatal(err, l)
-	}
+	assert.Assert(t, err == nil && l == 0)
 
 	err = txn.Commit()
-	if err != nil {
-		t.FailNow()
-	}
+	assert.Assert(t, err == nil)
 }
 
 func TestHash(t *testing.T) {

@@ -1,26 +1,28 @@
 package provider
 
 import (
+	"os"
 	"testing"
 
 	"github.com/zhiqiangxu/mondis"
+	"gotest.tools/assert"
 )
 
+const dataDir = "/tmp/mondis"
+
 func TestProvider(t *testing.T) {
-	for i := 0; i < 2; i++ {
 
-		var b mondis.KVDB
-		switch i {
-		case 0:
-			b = NewBadger()
-		case 1:
-			b = NewLevelDB()
-		}
+	providers := []func() mondis.KVDB{
+		NewBadger, NewLevelDB,
+	}
 
-		err := b.Open(mondis.KVOption{Dir: "/tmp/mondis"})
-		if err != nil {
-			t.Fatal("b.Open")
-		}
+	for _, provider := range providers {
+		os.RemoveAll(dataDir)
+
+		b := provider()
+
+		err := b.Open(mondis.KVOption{Dir: dataDir})
+		assert.Assert(t, err == nil)
 
 		key1 := []byte("key1")
 		{
@@ -28,41 +30,29 @@ func TestProvider(t *testing.T) {
 
 			// test Set nil
 			err = b.Set(key1, nil, nil)
-			if err != nil {
-				t.Fatal("Set1")
-			}
+			assert.Assert(t, err == nil)
 			// test Get nil value
 			v, _, err := b.Get(key1)
-			if err != nil || v != nil {
-				t.Fatal("Get1")
-			}
+			assert.Assert(t, err == nil && v == nil)
 
 			exists, err := b.Exists(key1)
-			if err != nil || !exists {
-				t.Fatal("Exists1")
-			}
+			assert.Assert(t, err == nil && exists)
 
 			// test Set empty
 			empty := []byte("")
 			err = b.Set(key1, empty, nil)
-			if err != nil {
-				t.Fatal("Set2")
-			}
+			assert.Assert(t, err == nil)
+
 			// test Get empty value
 			v, _, err = b.Get(key1)
-			if err != nil || v != nil {
-				t.Fatal("Get2")
-			}
+			assert.Assert(t, err == nil && v == nil)
+
 			exists, err = b.Exists(key1)
-			if err != nil || !exists {
-				t.Fatal("Exists2")
-			}
+			assert.Assert(t, err == nil && exists)
 		}
 
 		err = b.Close()
-		if err != nil {
-			t.Fatal("Close", err)
-		}
+		assert.Assert(t, err == nil)
 
 	}
 
